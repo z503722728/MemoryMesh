@@ -48,7 +48,7 @@ Edges represent relationships between nodes:
 
 ### Schemas
 The most important part of the application.
-Schemas define how nodes and edges should be structured for a particular entity type. By placing a schema in `src/config/schemas/`, MemoryMesh **automatically generates tools** `add_<nodeType>`, `update_<nodeType>`, and `delete_<nodeType>`.
+Schemas define how nodes and edges should be structured for a particular entity type. By placing a schema in `dist/config/schemas/`, MemoryMesh **automatically generates tools** `add_<nodeType>`, `update_<nodeType>`, and `delete_<nodeType>`.
 File name: `[name].schema.json`
 
 Schema Fields:
@@ -111,12 +111,12 @@ With this schema, the server creates the following tools:
 **IMPORTANT:** This repository includes 11 RPG-theme schemas that you can freely explore, modify and create your own! 
 
 ### Memory file
-By default, data is stored in a JSON file in `src/data/memory.json`.
+By default, data is stored in a JSON file in `dist/data/memory.json`.
 
 ## Custom implementation
 
 To add a new entity type:
-1. Create a schema file in `src/config/schemas/` (e.g., city.schema.json).
+1. Create a schema file in `dist/config/schemas/` (e.g., city.schema.json).
 2. Restart the server.
 3. The dynamic tools (add_city, update_city, delete_city) will be available automatically.
 
@@ -148,6 +148,8 @@ What I usually do is I start a session with an empty file and ask AI to start th
 > Add a a couple of cities, some npcs, couple locations around the city to explore, hide an artifact or two somewhere
 
 ![image](https://github.com/user-attachments/assets/508d5903-2896-4665-a892-cdb7b81dfba6)
+
+3. Sample [memory]()
 
 ## Installation
 Installation instruction provided by Claude with MCP knowledge and modified by me after testing. I don't have experience with JS, git and coding in general and will appreciate any help in organizing this part.
@@ -210,7 +212,9 @@ Add this to your Claude Desktop configuration file:
 3. The server should show as connected
 
 ## Known Issues
-1. You may occasionally see messages like "Error executing code: MCP error -32603: MCP error -32603: Error processing tool call: location "..." not found" enabled for debugging. These do not affect functionality. The AI attempts to locate existing nodes before updating them, and if none are found, it will create them after the error message. 
+1. You may occasionally see messages like "Error executing code: MCP error -32603: MCP error -32603: Error processing tool call: location "..." not found" enabled for debugging. These do not affect functionality. The AI attempts to locate existing nodes before updating them, and if none are found, it will create them after the error message.
+2. AI doesn't like to delete nodes, unless instructed directly. Looking for a prompt to properly instruct it.
+3. Occasionally AI adds information in generic metada field that fits better in set properties, you can try `additionalProperties: false` to prevent that.
 
 ## Contribution
 This project is a personal exploration into integrating structured data with AI reasoning capabilities. Contributions, feedback, and ideas are welcome to push it further or inspire new projects.
