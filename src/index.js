@@ -8,6 +8,7 @@ import {
 import {KnowledgeGraphManager} from './core/KnowledgeGraphManager.js';
 import {handleCallToolRequest} from './tools/callToolHandler.js';
 import {initializeDynamicTools} from "./tools/DynamicSchemaToolRegistry.js";
+import {tools} from './tools/tools.js';
 
 /**
  * Initializes and starts the Knowledge Graph MCP Server.
@@ -43,7 +44,7 @@ async function main() {
         // Set up request handlers with dynamic tools
         server.setRequestHandler(ListToolsRequestSchema, async () => {
             return {
-                tools: dynamicTools.getTools(),
+                tools: [...dynamicTools.getTools(), ...tools],
             };
         });
 
