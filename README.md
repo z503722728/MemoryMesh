@@ -150,24 +150,13 @@ What I usually do is I start a session with an empty file and ask AI to start th
 ![image](https://github.com/user-attachments/assets/508d5903-2896-4665-a892-cdb7b81dfba6)
 
 ## Installation
-Installation instruction provided by Claude with MCP knowledge and should be verified.
-I will appreciate any help with providing proper installation instructions.
+Installation instruction provided by Claude with MCP knowledge and modified by me after testing. I don't have experience with JS, git and coding in general and will appreciate any help in organizing this part.
 
 ### Prerequisites
 Node.js 18 or higher
 npm (included with Node.js)
 
-### Installation Methods
-#### Method 1: Install from npm
-
-```bash
-# Install globally
-npm install -g memorymesh
-
-# Or install locally in a project
-npm install memorymesh
-```
-#### Method 2: Install from source
+### Installation
 
 ```bash
 # Clone the repository
@@ -180,9 +169,9 @@ npm install
 # Build the project
 npm run build
 
-# Optional: Install globally from local source
-npm install -g .
 ```
+
+**IMPORTANT** from `\memorymesh\src` copy config and data folders to  created `\memorymesh\dist`
 
 ### Configure with Claude Desktop
 Add this to your Claude Desktop configuration file:
@@ -195,7 +184,7 @@ Add this to your Claude Desktop configuration file:
     "memorymesh": {
       "command": "/usr/local/bin/node",
       "args": [
-        "/usr/local/lib/node_modules/memorymesh/src/index.js"
+        "/usr/local/lib/node_modules/memorymesh/dist/index.js"
       ]
     }
   }
@@ -209,7 +198,7 @@ Add this to your Claude Desktop configuration file:
     "memorymesh": {
       "command": "C:\\Program Files\\nodejs\\node.exe",
       "args": [
-        "[path_to_app]\\memorymesh\\src\\index.js"
+        "[full_path_to_app]\\memorymesh\\dist\\index.js"
       ]
     }
   }
