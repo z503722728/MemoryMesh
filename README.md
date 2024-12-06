@@ -120,6 +120,10 @@ To add a new entity type:
 2. Restart the server.
 3. The dynamic tools (add_city, update_city, delete_city) will be available automatically.
 
+## Memory Flow
+
+![image](https://github.com/user-attachments/assets/27519003-c1e6-448a-9fdb-cd0a0009f67d)
+
 ## Prompt
 For optimal results:
 * Use Claude’s "Projects" feature with custom instructions
