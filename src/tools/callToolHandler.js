@@ -21,12 +21,7 @@ export async function handleCallToolRequest(request, knowledgeGraphManager) {
     }
 
     try {
-        // Check if it's a schema-based tool
-        if (name.match(/^(add|update|delete)_/)) {
-            return await dynamicTools.handleToolCall(name, args, knowledgeGraphManager);
-        }
-
-        // Handle generic tools
+        // First check if it's a generic tool
         switch (name) {
             case "add_nodes":
                 return {toolResult: await knowledgeGraphManager.addNodes(args.nodes)};
@@ -65,6 +60,11 @@ export async function handleCallToolRequest(request, knowledgeGraphManager) {
                 return {toolResult: await knowledgeGraphManager.openNodes(args.names)};
 
             default:
+                // Only try schema-based handling if it's not a generic tool
+                if (name.match(/^(add|update|delete)_/)) {
+                    return await dynamicTools.handleToolCall(name, args, knowledgeGraphManager);
+                }
+
                 throw new McpError(
                     ErrorCode.MethodNotFound,
                     `Unknown tool: ${name}`
