@@ -1,5 +1,5 @@
 {
-  "name": "add_temporal_node",
+  "name": "add_temporal",
   "description": "Represents a specific point in time and its associated environmental conditions.",
   "properties": {
     "time": {
