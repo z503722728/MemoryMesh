@@ -38,9 +38,6 @@ const server = new Server({
  */
 async function main() {
     try {
-        // Initialize dynamic tools first
-        const dynamicTools = await initializeDynamicTools();
-
         // Set up request handlers with dynamic tools
         server.setRequestHandler(ListToolsRequestSchema, async () => {
             return {
