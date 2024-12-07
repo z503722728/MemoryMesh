@@ -7,7 +7,6 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import {KnowledgeGraphManager} from './core/KnowledgeGraphManager.js';
 import {handleCallToolRequest} from './tools/callToolHandler.js';
-import {initializeDynamicTools} from "./tools/DynamicSchemaToolRegistry.js";
 import {tools} from './tools/tools.js';
 
 /**
@@ -22,7 +21,7 @@ const knowledgeGraphManager = new KnowledgeGraphManager();
 // The server instance and tools exposed to Claude
 const server = new Server({
     name: "memorymesh",
-    version: "0.1.0",
+    version: "0.1.2",
 }, {
     capabilities: {
         tools: {},  // Removed listChanged since we're not using dynamic updates
@@ -38,13 +37,10 @@ const server = new Server({
  */
 async function main() {
     try {
-        // Initialize dynamic tools first
-        const dynamicTools = await initializeDynamicTools();
-
         // Set up request handlers with dynamic tools
         server.setRequestHandler(ListToolsRequestSchema, async () => {
             return {
-                tools: [...dynamicTools.getTools(), ...tools],
+                tools: tools,
             };
         });
 
