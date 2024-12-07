@@ -7,7 +7,6 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import {KnowledgeGraphManager} from './core/KnowledgeGraphManager.js';
 import {handleCallToolRequest} from './tools/callToolHandler.js';
-import {initializeDynamicTools} from "./tools/DynamicSchemaToolRegistry.js";
 import {tools} from './tools/tools.js';
 
 /**
