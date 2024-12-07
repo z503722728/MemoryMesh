@@ -22,7 +22,7 @@ const knowledgeGraphManager = new KnowledgeGraphManager();
 // The server instance and tools exposed to Claude
 const server = new Server({
     name: "memorymesh",
-    version: "0.1.0",
+    version: "0.1.2",
 }, {
     capabilities: {
         tools: {},  // Removed listChanged since we're not using dynamic updates
@@ -44,7 +44,7 @@ async function main() {
         // Set up request handlers with dynamic tools
         server.setRequestHandler(ListToolsRequestSchema, async () => {
             return {
-                tools: [...dynamicTools.getTools(), ...tools],
+                tools: tools,
             };
         });
 
