@@ -17,15 +17,6 @@ export class SearchManager extends ISearchManager {
     }
 
     /**
-     * Initializes the SearchManager by emitting the 'initialized' event.
-     *
-     * @returns {Promise<void>}
-     */
-    async initialize() {
-        this.emit('initialized');
-    }
-
-    /**
      * Searches for nodes in the knowledge graph based on a query.
      *
      * @param {string} query - The search query string.

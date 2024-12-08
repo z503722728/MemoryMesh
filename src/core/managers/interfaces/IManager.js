@@ -1,10 +1,10 @@
-// src/managers/interfaces/IManager.js
+// src/core/managers/interfaces/IManager.js
 import {EventEmitter} from '../../events/EventEmitter.js';
 
 /**
  * @class IManager
  * @extends EventEmitter
- * @classdesc Abstract base class for all manager interfaces. Provides event emission capabilities and enforces the implementation of the `initialize` method.
+ * @classdesc Abstract base class for all manager interfaces. Provides event emission capabilities and implements common initialization.
  */
 export class IManager extends EventEmitter {
     /**
@@ -27,12 +27,12 @@ export class IManager extends EventEmitter {
     }
 
     /**
-     * Initializes the manager. Must be implemented by subclasses.
+     * Initializes the manager by emitting the 'initialized' event.
+     * Common implementation for all manager classes.
      *
      * @returns {Promise<void>}
-     * @throws {Error} Method not implemented.
      */
     async initialize() {
-        throw new Error('Method not implemented');
+        this.emit('initialized', {manager: this.constructor.name});
     }
 }

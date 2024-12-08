@@ -17,15 +17,6 @@ export class MetadataManager extends IMetadataManager {
     }
 
     /**
-     * Initializes the MetadataManager by emitting the 'initialized' event.
-     *
-     * @returns {Promise<void>}
-     */
-    async initialize() {
-        this.emit('initialized');
-    }
-
-    /**
      * Adds metadata to existing nodes.
      *
      * @param {Array<Object>} metadata - Array of metadata objects to add. Each object should have `nodeName` and `contents`.
