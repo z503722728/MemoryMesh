@@ -7,7 +7,7 @@ MemoryMesh is a local knowledge graph server that can store, update, and recall 
 
 ### Key Features
 * **Dynamic Schema-Based Tools:** MemoryMesh supports **creating dynamic tools directly from schema definitions**. You can add a schema file, and the **server automatically generates** add_, update_, and delete_ tools for that entity type.
-* **Schemas:** Allows the creation of "schemas" that **pushes AI** in generating necessary nodes (entities) throughout your sessions. _(more details below)_
+* **Schemas:** Allows the creation of "schemas" that **pushes AI** in generating necessary nodes (entities) throughout your sessions. A separate tool included! _(more details below)_
 * **Metadata Expansion:** Define required, optional, and enumerated fields on nodes. This structure **guides AI**, ensuring it provides the information you need.
 * **Relationships Made Easy:** By including relationship definitions within schemas, **AI will be forced** to create edges and related nodes.
 * **AI Awareness:** Tools are designed to **inform the AI what data is expected**. The AI can use these tools to maintain a consistent and accurate knowledge graph as the narrative or data scenario progresses.
@@ -47,6 +47,15 @@ Edges represent relationships between nodes:
 ```
 
 ### Schemas
+
+#### SchemaManager tool - an easy way to create and edit your schemas!
+[SchemaManager tool](https://github.com/CheMiguel23/MemoryMesh/blob/main/SchemaManager.html) included in the repository.
+How to use in the [guide](https://github.com/CheMiguel23/MemoryMesh/discussions/3).
+
+<img width="370" alt="image" src="https://github.com/user-attachments/assets/e8f0c808-2ff6-48da-ac7c-cf51aebde7b8">
+
+#### Details
+
 The most important part of the application.
 Schemas define how nodes and edges should be structured for a particular entity type. By placing a schema in `dist/config/schemas/`, MemoryMesh **automatically generates tools** `add_<nodeType>`, `update_<nodeType>`, and `delete_<nodeType>`.
 File name: `[name].schema.json`
