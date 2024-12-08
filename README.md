@@ -1,16 +1,16 @@
 # MemoryMesh
 
-This project is based on the [Knowledge Graph Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) from the MCP servers repository and **preserves its base functionality**. For installation details beyond what’s provided here, refer to the original repository link above if needed. The main entry point of this application is the index.js file.
+This project is based on the [Knowledge Graph Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) from the MCP servers repository and retains its core functionality. For installation details beyond what’s provided here, refer to the original repository link above if needed. The main entry point of this application is the index.js file.
 
 ## Overview
-MemoryMesh is a local knowledge graph server that can store, update, and recall structured information for AI models. Originally **tailored for text-based RPG** settings, it can also be **adapted to social networks, organizational planning, or other structured data scenarios**.
+MemoryMesh is a local knowledge graph server that can store, update, and recall structured information for AI models. Originally **designed for text-based RPG** settings, it can also be **adapted to social networks, organizational planning, or other structured data scenarios**.
 
 ### Key Features
 * **Dynamic Schema-Based Tools:** MemoryMesh supports **creating dynamic tools directly from schema definitions**. You can add a schema file, and the **server automatically generates** add_, update_, and delete_ tools for that entity type.
 * **Schemas:** Allows the creation of "schemas" that **pushes AI** in generating necessary nodes (entities) throughout your sessions. A separate tool included! _(more details below)_
 * **Metadata Expansion:** Define required, optional, and enumerated fields on nodes. This structure **guides AI**, ensuring it provides the information you need.
 * **Relationships Made Easy:** By including relationship definitions within schemas, **AI will be forced** to create edges and related nodes.
-* **AI Awareness:** Tools are designed to **inform the AI what data is expected**. The AI can use these tools to maintain a consistent and accurate knowledge graph as the narrative or data scenario progresses.
+* **AI Awareness:** Tools are designed to **inform the AI about the data that is expected**. The AI can use these tools to maintain a consistent and accurate knowledge graph as the narrative or data scenario progresses.
 * **Update nodes and edges**: added update tool.
 * **Event Support:** An event system is in place to track operations _(still not fully tested)_.
 
@@ -50,7 +50,7 @@ Edges represent relationships between nodes:
 
 #### SchemaManager tool - an easy way to create and edit your schemas!
 [SchemaManager tool](https://github.com/CheMiguel23/MemoryMesh/blob/main/SchemaManager.html) included in the repository.
-How to use in the [guide](https://github.com/CheMiguel23/MemoryMesh/discussions/3).
+How to use it is detailed in the [guide](https://github.com/CheMiguel23/MemoryMesh/discussions/3).
 
 <img width="370" alt="image" src="https://github.com/user-attachments/assets/e8f0c808-2ff6-48da-ac7c-cf51aebde7b8">
 
@@ -62,7 +62,7 @@ File name: `[name].schema.json`
 
 Schema Fields:
 * `name` - Identifier for the schema and node type within the memory. **IMPORTANT**: The schema’s name *must* start with `add_` to be recognized.
-* `description` - Used as the description for the `add_<name>` tool, providing context for the AI. *(The `delete` and `update` tools have a generic desciption)*
+* `description` - Used as the description for the `add_<name>` tool, providing context for the AI. *(The `delete` and `update` tools have a generic description)*
 * `properties` - Each property includes its type, description, and additional constraints.
     * `property`
         * `type` - Supported values are `string` or `array`.
@@ -79,16 +79,16 @@ Schema Fields:
 ```json
 {
   "name": "add_npc",
-  "description": "Schema for adding an NPC to the memory." ,
+  "description": "Schema for adding an NPC to the memory" ,
   "properties": {
     "name": {
       "type": "string",
-      "description": "The unique name of the NPC.",
+      "description": "A unique identifier for the NPC",
       "required": true
     },
     "race": {
       "type": "string",
-      "description": "The species or race of the NPC.",
+      "description": "The species or race of the NPC",
       "required": true,
       "enum": [
         "Human",
@@ -162,10 +162,8 @@ What I usually do is I start a session with an empty file and ask AI to start th
 
 ![image](https://github.com/user-attachments/assets/508d5903-2896-4665-a892-cdb7b81dfba6)
 
-3. Sample [memory]()
-
 ## Installation
-Installation instruction provided by Claude with MCP knowledge and modified by me after testing. I don't have experience with JS, git and coding in general and will appreciate any help in organizing this part.
+Installation instruction provided by Claude with MCP knowledge and modified by me after testing. I don't have experience with JS, git and coding in general, so I would appreciate any assistance in organizing this section.
 
 ### Prerequisites
 Node.js 18 or higher
@@ -189,7 +187,7 @@ npm run build
 **IMPORTANT** from `\memorymesh\src` copy config and data folders to  created `\memorymesh\dist`
 
 ### Configure with Claude Desktop
-Add this to your Claude Desktop configuration file:
+Add the following to your Claude Desktop configuration file:
 
 #### MacOS
 `~/Library/Application\ Support/Claude/claude_desktop_config.json`
@@ -225,8 +223,8 @@ Add this to your Claude Desktop configuration file:
 3. The server should show as connected
 
 ## Known Issues
-1. You may occasionally see messages like "Error executing code: MCP error -32603: MCP error -32603: Error processing tool call: location "..." not found" enabled for debugging. These do not affect functionality. The AI attempts to locate existing nodes before updating them, and if none are found, it will create them after the error message.
-2. AI doesn't like to delete nodes, unless instructed directly. Looking for a prompt to properly instruct it.
+1. You may occasionally see messages like "Error executing code: MCP error -32603: MCP error -32603: Error processing tool call: location "..." not found". These messages are enabled for debugging and do not affect functionality.
+2. The AI tends to avoid deleting nodes unless explicitly instructed to do so.
 3. Occasionally AI adds information in generic metada field that fits better in set properties, you can try `additionalProperties: false` to prevent that.
 
 ## Contribution
