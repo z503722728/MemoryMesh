@@ -1,6 +1,18 @@
 // src/schema/loader/schemaProcessor.js
 
 /**
+ * Formats a field value into a metadata string.
+ *
+ * @param {string} field - The field name
+ * @param {string|string[]} value - The field value to format
+ * @returns {string} - Formatted metadata string
+ */
+function formatMetadataEntry(field, value) {
+    const formattedValue = Array.isArray(value) ? value.join(', ') : value;
+    return `${field}: ${formattedValue}`;
+}
+
+/**
  * Creates a node based on schema definition and input data.
  *
  * @param {Object} data - Input data for the node.
@@ -37,22 +49,14 @@ export async function createSchemaNode(data, schema, nodeType) {
         }
         // Skip if this field is part of a relationship
         if (!relationships || !relationships[field]) {
-            if (Array.isArray(data[field])) {
-                metadata.push(`${field}: ${data[field].join(', ')}`);
-            } else {
-                metadata.push(`${field}: ${data[field]}`);
-            }
+            metadata.push(formatMetadataEntry(field, data[field]));
         }
     }
 
     // Process optional fields
     for (const field of metadataConfig.optionalFields) {
         if (data[field] !== undefined && (!relationships || !relationships[field])) {
-            if (Array.isArray(data[field])) {
-                metadata.push(`${field}: ${data[field].join(', ')}`);
-            } else {
-                metadata.push(`${field}: ${data[field]}`);
-            }
+            metadata.push(formatMetadataEntry(field, data[field]));
         }
     }
 
@@ -76,12 +80,7 @@ export async function createSchemaNode(data, schema, nodeType) {
                         edgeType: config.edgeType
                     });
                 }
-                // Add relationship field to metadata only once
-                if (Array.isArray(value)) {
-                    metadata.push(`${field}: ${value.join(', ')}`);
-                } else {
-                    metadata.push(`${field}: ${value}`);
-                }
+                metadata.push(formatMetadataEntry(field, value));
             }
         }
     }
@@ -89,11 +88,7 @@ export async function createSchemaNode(data, schema, nodeType) {
     // Process additional properties (only those not already handled)
     for (const [key, value] of Object.entries(data)) {
         if (!excludedFields.has(key) && value !== undefined) {
-            if (Array.isArray(value)) {
-                metadata.push(`${key}: ${value.join(', ')}`);
-            } else {
-                metadata.push(`${key}: ${value}`);
-            }
+            metadata.push(formatMetadataEntry(key, value));
         }
     }
 
@@ -144,9 +139,7 @@ export async function updateSchemaNode(updates, currentNode, schema, currentGrap
     const updateMetadataEntry = (key, value) => {
         const metaKey = `${key.charAt(0).toUpperCase() + key.slice(1)}:`;
         const existingIndex = metadata.findIndex(meta => meta.startsWith(metaKey));
-
-        const newValue = Array.isArray(value) ? value.join(', ') : value;
-        const newEntry = `${metaKey} ${newValue}`;
+        const newEntry = formatMetadataEntry(key, value);
 
         if (existingIndex !== -1) {
             metadata[existingIndex] = newEntry;
