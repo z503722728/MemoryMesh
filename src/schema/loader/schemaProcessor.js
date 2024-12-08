@@ -17,21 +17,41 @@ export async function createSchemaNode(data, schema, nodeType) {
     const nodes = [];
     const edges = [];
 
-    // Process required fields
+    // Create a comprehensive set of fields to exclude from additional properties
+    const excludedFields = new Set([
+        'name',  // Exclude name as it's handled separately
+        ...metadataConfig.requiredFields,
+        ...metadataConfig.optionalFields,
+        ...(metadataConfig.excludeFields || []),
+    ]);
+
+    // Add relationship fields to excluded set
+    if (relationships) {
+        Object.keys(relationships).forEach(field => excludedFields.add(field));
+    }
+
+    // Process required fields first
     for (const field of metadataConfig.requiredFields) {
         if (data[field] === undefined) {
             throw new Error(`Required field "${field}" is missing`);
         }
-        metadata.push(`${field.charAt(0).toUpperCase() + field.slice(1)}: ${data[field]}`);
+        // Skip if this field is part of a relationship
+        if (!relationships || !relationships[field]) {
+            if (Array.isArray(data[field])) {
+                metadata.push(`${field}: ${data[field].join(', ')}`);
+            } else {
+                metadata.push(`${field}: ${data[field]}`);
+            }
+        }
     }
 
     // Process optional fields
     for (const field of metadataConfig.optionalFields) {
-        if (data[field]) {
+        if (data[field] !== undefined && (!relationships || !relationships[field])) {
             if (Array.isArray(data[field])) {
-                metadata.push(`${field.charAt(0).toUpperCase() + field.slice(1)}: ${data[field].join(', ')}`);
+                metadata.push(`${field}: ${data[field].join(', ')}`);
             } else {
-                metadata.push(`${field.charAt(0).toUpperCase() + field.slice(1)}: ${data[field]}`);
+                metadata.push(`${field}: ${data[field]}`);
             }
         }
     }
@@ -56,29 +76,28 @@ export async function createSchemaNode(data, schema, nodeType) {
                         edgeType: config.edgeType
                     });
                 }
+                // Add relationship field to metadata only once
+                if (Array.isArray(value)) {
+                    metadata.push(`${field}: ${value.join(', ')}`);
+                } else {
+                    metadata.push(`${field}: ${value}`);
+                }
             }
         }
     }
 
-    // Process additional properties
-    const excludedFields = new Set([
-        ...metadataConfig.requiredFields,
-        ...metadataConfig.optionalFields,
-        ...(metadataConfig.excludeFields || []),
-        'name'  // Always exclude name as it's used as node identifier
-    ]);
-
+    // Process additional properties (only those not already handled)
     for (const [key, value] of Object.entries(data)) {
         if (!excludedFields.has(key) && value !== undefined) {
             if (Array.isArray(value)) {
-                metadata.push(`${key.charAt(0).toUpperCase() + key.slice(1)}: ${value.join(', ')}`);
+                metadata.push(`${key}: ${value.join(', ')}`);
             } else {
-                metadata.push(`${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`);
+                metadata.push(`${key}: ${value}`);
             }
         }
     }
 
-    // Create the main node
+    // Create the main node without duplicating the name in metadata
     const mainNode = {
         name: data.name,
         nodeType,
@@ -107,14 +126,22 @@ export async function updateSchemaNode(updates, currentNode, schema, currentGrap
         add: []
     };
 
-    // Create a set of relationship fields from the schema
-    const relationshipFields = new Set(Object.keys(relationships || {}));
+    // Create a set of all schema-defined fields
+    const schemaFields = new Set([
+        ...metadataConfig.requiredFields,
+        ...metadataConfig.optionalFields,
+        ...(metadataConfig.excludeFields || []),
+        'name',
+        'metadata'
+    ]);
+
+    // Add relationship fields to schema fields
+    if (relationships) {
+        Object.keys(relationships).forEach(field => schemaFields.add(field));
+    }
 
     // Function to update or add metadata entry
     const updateMetadataEntry = (key, value) => {
-        // Skip if it's a relationship field
-        if (relationshipFields.has(key)) return;
-
         const metaKey = `${key.charAt(0).toUpperCase() + key.slice(1)}:`;
         const existingIndex = metadata.findIndex(meta => meta.startsWith(metaKey));
 
@@ -131,7 +158,7 @@ export async function updateSchemaNode(updates, currentNode, schema, currentGrap
     // Handle all schema-defined fields (both required and optional)
     const allSchemaFields = [...metadataConfig.requiredFields, ...metadataConfig.optionalFields];
     for (const field of allSchemaFields) {
-        if (updates[field] !== undefined && !relationshipFields.has(field)) {
+        if (updates[field] !== undefined && !relationships[field]) {
             updateMetadataEntry(field, updates[field]);
         }
     }
@@ -170,17 +197,9 @@ export async function updateSchemaNode(updates, currentNode, schema, currentGrap
         }
     }
 
-    // Process additional properties (excluding relationships and schema fields)
-    const excludedFields = new Set([
-        ...allSchemaFields,
-        ...(metadataConfig.excludeFields || []),
-        ...relationshipFields,
-        'name',
-        'metadata'
-    ]);
-
+    // Process additional properties (only those not in schema)
     for (const [key, value] of Object.entries(updates)) {
-        if (!excludedFields.has(key) && value !== undefined) {
+        if (!schemaFields.has(key) && value !== undefined) {
             updateMetadataEntry(key, value);
         }
     }
