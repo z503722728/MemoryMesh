@@ -150,28 +150,68 @@ export class EdgeManager extends IEdgeManager {
     }
 
     /**
-     * Retrieves edges from the knowledge graph based on filter criteria.
+     * Retrieves edges from the knowledge graph based on filter criteria, using an optimized
+     * index-based approach to minimize memory usage and improve query performance.
      *
-     * @param {Object} [filter] - Optional filter criteria.
-     * @param {string} [filter.from] - Filter edges originating from this node.
-     * @param {string} [filter.to] - Filter edges targeting this node.
-     * @param {string} [filter.edgeType] - Filter edges of this type.
-     * @returns {Promise<Array<Object>>} - Array of edges matching the filter criteria.
-     * @throws {Error} If retrieving edges fails.
+     * @param {Object} [filter] - Optional filter criteria. If not provided, returns all edges.
+     * @param {string} [filter.from] - Filter edges originating from this node. Utilizes the byFrom index for O(1) lookup.
+     * @param {string} [filter.to] - Filter edges targeting this node. Utilizes the byTo index for O(1) lookup.
+     * @param {string} [filter.edgeType] - Filter edges of this type. Utilizes the byType index for O(1) lookup.
+     * @returns {Promise<Array<Object>>} - Array of edges matching all provided filter criteria. Returns an empty array if no matches found.
+     * @throws {Error} If retrieving edges fails or if index access fails.
      */
     async getEdges(filter) {
         try {
-            const graph = await this.storage.loadGraph();
+            // If no filter, return all edges (unchanged behavior)
             if (!filter) {
+                const graph = await this.storage.loadGraph();
                 return graph.edges;
             }
 
-            return graph.edges.filter(edge => {
-                if (filter.from && edge.from !== filter.from) return false;
-                if (filter.to && edge.to !== filter.to) return false;
-                if (filter.edgeType && edge.edgeType !== filter.edgeType) return false;
-                return true;
-            });
+            // Get candidate edge IDs using indices
+            let candidateIds = null;
+
+            // Step 1: Filter by 'from' node
+            if (filter.from) {
+                candidateIds = this.storage.edgeIndex.byFrom.get(filter.from) || new Set();
+                // If we have a 'from' filter but no matches, return empty array
+                if (candidateIds.size === 0) return [];
+            }
+
+            // Step 2: Filter by 'to' node
+            if (filter.to) {
+                const toIds = this.storage.edgeIndex.byTo.get(filter.to) || new Set();
+                if (candidateIds) {
+                    // Intersect with existing candidates
+                    candidateIds = new Set([...candidateIds].filter(id => toIds.has(id)));
+                } else {
+                    // First filter, use all 'to' matches
+                    candidateIds = toIds;
+                }
+                // If intersection is empty, return empty array
+                if (candidateIds.size === 0) return [];
+            }
+
+            // Step 3: Filter by edge type
+            if (filter.edgeType) {
+                const typeIds = this.storage.edgeIndex.byType.get(filter.edgeType) || new Set();
+                if (candidateIds) {
+                    // Intersect with existing candidates
+                    candidateIds = new Set([...candidateIds].filter(id => typeIds.has(id)));
+                } else {
+                    // First filter, use all type matches
+                    candidateIds = typeIds;
+                }
+                // If intersection is empty, return empty array
+                if (candidateIds.size === 0) return [];
+            }
+
+            // If we have no candidates after all filters, return empty array
+            if (!candidateIds || candidateIds.size === 0) return [];
+
+            // Load only the filtered edges
+            const edges = await this.storage.loadEdgesByIds(Array.from(candidateIds));
+            return edges;
         } catch (error) {
             this.emit('error', {operation: 'getEdges', error});
             throw error;
