@@ -226,27 +226,28 @@ export async function updateSchemaNode(updates, currentNode, schema, currentGrap
  * @throws {Error} If handling the update fails.
  */
 export async function handleSchemaUpdate(updates, schema, nodeType, knowledgeGraphManager) {
-    const graph = await knowledgeGraphManager.readGraph();
+    // Get only the specific nodes we need using openNodes
+    const {nodes} = await knowledgeGraphManager.openNodes([updates.name]);
+    const node = nodes.find(n => n.nodeType === nodeType);
 
-    // Find the node
-    const node = graph.nodes.find(n => n.name === updates.name && n.nodeType === nodeType);
     if (!node) {
         throw new Error(`${nodeType} "${updates.name}" not found`);
     }
 
-    // Process updates using the schema
+    // Get relevant edges only for this node if we're updating relationships
+    let relevantEdges = [];
+    if (schema.relationships && Object.keys(schema.relationships).some(field => updates[field] !== undefined)) {
+        const {edges} = await knowledgeGraphManager.getEdges({from: updates.name});
+        relevantEdges = edges;
+    }
+
+    // Process updates using the schema with only relevant data
     const {metadata, edgeChanges} = await updateSchemaNode(
         updates,
         node,
         schema,
-        graph
+        {nodes: [node], edges: relevantEdges}
     );
-
-    // Update the node
-    const updatedNode = {
-        ...node,
-        metadata
-    };
 
     // Handle edge changes in a transaction-like manner
     if (edgeChanges.remove.length > 0) {
@@ -257,7 +258,12 @@ export async function handleSchemaUpdate(updates, schema, nodeType, knowledgeGra
         await knowledgeGraphManager.addEdges(edgeChanges.add);
     }
 
-    // Update the node in the graph
+    // Update the node
+    const updatedNode = {
+        ...node,
+        metadata
+    };
+
     await knowledgeGraphManager.updateNodes([updatedNode]);
 
     return {

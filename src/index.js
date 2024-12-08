@@ -21,7 +21,7 @@ const knowledgeGraphManager = new KnowledgeGraphManager();
 // The server instance and tools exposed to Claude
 const server = new Server({
     name: "memorymesh",
-    version: "0.1.2",
+    version: "0.1.3",
 }, {
     capabilities: {
         tools: {},  // Removed listChanged since we're not using dynamic updates
