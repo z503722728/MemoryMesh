@@ -17,15 +17,6 @@ export class EdgeManager extends IEdgeManager {
     }
 
     /**
-     * Initializes the EdgeManager by emitting the 'initialized' event.
-     *
-     * @returns {Promise<void>}
-     */
-    async initialize() {
-        this.emit('initialized');
-    }
-
-    /**
      * Adds new edges to the knowledge graph.
      *
      * @param {Array<Object>} edges - Array of edge objects to add. Each edge should have `from`, `to`, and `edgeType`.

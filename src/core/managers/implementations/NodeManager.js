@@ -17,15 +17,6 @@ export class NodeManager extends INodeManager {
     }
 
     /**
-     * Initializes the NodeManager by emitting the 'initialized' event.
-     *
-     * @returns {Promise<void>}
-     */
-    async initialize() {
-        this.emit('initialized');
-    }
-
-    /**
      * Adds new nodes to the knowledge graph.
      *
      * @param {Array<Object>} nodes - Array of node objects to add. Each node should have at least a `name` and `nodeType`.
