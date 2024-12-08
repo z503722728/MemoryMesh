@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema Manager</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ace.js"></script>
+    <style>
+        /* --- Base Styles --- */
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #60a5fa;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            color: var(--gray-800);
+            background-color: var(--gray-50);
+        }
+
+        /* --- Typography --- */
+        h1 {
+            margin-bottom: 2rem;
+            color: var(--gray-900);
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        h2 {
+            color: var(--gray-800);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        h3 {
+            color: var(--gray-700);
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* --- Layout Components --- */
+        .container {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .folder-section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .folder-path {
+            flex: 1;
+            font-family: monospace;
+            padding: 0.5rem;
+            background: var(--gray-50);
+            border: 1px solid var(--gray-300);
+            border-radius: 0.25rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* --- Tabs --- */
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--gray-200);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 1rem;
+            color: var(--gray-600);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .tab:hover {
+            color: var(--primary);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* --- Forms --- */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        input[type="text"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.25rem;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+        }
+
+        input[type="text"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* --- Properties Section --- */
+        .properties-container {
+            border: 1px solid var(--gray-300);
+            padding: 1rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+            background: white;
+        }
+
+        .property {
+            border: 1px solid var(--gray-200);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.25rem;
+            background: var(--gray-50);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .property-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        /* --- Buttons --- */
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 1rem;
+            background: var(--primary);
+            color: white;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        /* --- Editor --- */
+        .editor-container {
+            height: 500px;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        #jsonEditor {
+            height: 100%;
+            font-size: 14px;
+        }
+
+        /* --- Checkboxes --- */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        /* --- Toast Notifications --- */
+        #toastContainer {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 1000;
+        }
+
+        .toast {
+            min-width: 250px;
+            padding: 1rem 1.5rem;
+            border-radius: 0.25rem;
+            color: white;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transform: translateX(100%);
+            animation: slideIn 0.5s forwards, fadeOut 0.5s forwards 2.5s;
+        }
+
+        .toast-success {
+            background-color: var(--success);
+        }
+
+        .toast-error {
+            background-color: var(--danger);
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+
+        /* --- Schema Select --- */
+        #loadSchemaSelect {
+            margin-bottom: 1rem;
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.25rem;
+            font-size: 1rem;
+        }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .folder-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .property-header {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .property {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* --- New Styles --- */
+        /* Add new styles for locked fields */
+        .locked-field {
+            background-color: var(--gray-100);
+            cursor: not-allowed;
+        }
+
+        .locked-field:disabled {
+            color: var(--gray-700);
+        }
+
+        /* Add style for the additional properties checkbox */
+        .global-settings {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--gray-100);
+            border-radius: 0.25rem;
+        }
+
+        /* --- Enum Fields --- */
+        .enum-fields {
+            display: none;
+        }
+
+        /* --- Updated Property Layout --- */
+        .property-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .property-row.large {
+            flex-wrap: wrap;
+        }
+
+        .property-row.large .form-group {
+            flex: 2;
+        }
+
+        .property-row.small {
+            flex: 1;
+        }
+
+        .property-row .form-group {
+            flex: 1;
+        }
+
+        .conditional-input {
+            flex: 2;
+        }
+
+        /* Adjust Description field to be twice as wide */
+        .description-input {
+            flex: 2;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Schema Manager</h1>
+
+    <div class="folder-section">
+        <button class="btn" onclick="selectDirectory()">Select Schemas Folder</button>
+        <div class="folder-path" id="folderPath">No folder selected</div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer"></div>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="create">Create Schema</button>
+        <button class="tab" data-tab="viewRaw">View/Edit Schema (raw)</button>
+    </div>
+
+    <div id="createSchema" class="tab-content active">
+        <div class="form-group">
+            <label for="schemaName">Schema Name:</label>
+            <input type="text" id="schemaName" placeholder="Identifier for the schema and node type within the memory">
+            <!-- Removed onInput="updateNameProperty()" -->
+        </div>
+
+        <div class="form-group">
+            <label for="schemaDescription">Schema Description:</label>
+            <input type="text" id="schemaDescription" placeholder="Description for the add_<name> tool, providing context for the AI.">
+        </div>
+
+        <div class="global-settings">
+            <div class="checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="allowAdditionalProps" checked>
+                    Allow Additional Properties
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Properties:</label>
+            <div id="propertiesContainer" class="properties-container">
+                <!-- Properties will be added here -->
+            </div>
+            <button class="btn" onclick="addProperty()">Add Property</button>
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+            <button class="btn" onclick="viewRawSchema()">View in Raw Format</button>
+            <button class="btn btn-danger" onclick="resetForm()">Reset</button>
+        </div>
+    </div>
+
+    <div id="viewRawSchema" class="tab-content">
+        <select id="loadSchemaSelect">
+            <option value="">Select a schema to load...</option>
+        </select>
+        <div class="editor-container">
+            <div id="jsonEditor"></div>
+        </div>
+        <div class="button-group" style="display: flex; gap: 1rem;">
+            <button class="btn" onclick="saveSchema()">Save Schema</button>
+            <button class="btn" onclick="editSchema()">Edit</button>
+            <button class="btn btn-danger" onclick="deleteSchema()">Delete Schema</button>
+        </div>
+    </div>
+<script>
+    // Global state
+    let dirHandle = null;
+    let currentSchemaHandle = null;
+
+    // Initialize Ace editor
+    const editor = ace.edit("jsonEditor");
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/json");
+    editor.setOptions({
+        fontSize: "14px",
+        showPrintMargin: false,
+        showGutter: true,
+        highlightActiveLine: true,
+        enableBasicAutocompletion: true,
+        enableLiveAutocompletion: true,
+        enableSnippets: true
+    });
+
+    // Toast Notifications
+    function showToast(message, type = 'success', duration = 3000) {
+        const toastContainer = document.getElementById('toastContainer');
+
+        const toast = document.createElement('div');
+        toast.classList.add('toast');
+        toast.classList.add(type === 'success' ? 'toast-success' : 'toast-error');
+        toast.textContent = message;
+
+        toastContainer.appendChild(toast);
+
+        // Remove toast after duration + animation time
+        setTimeout(() => {
+            toast.remove();
+        }, duration + 1000); // 1000ms accounts for fadeOut animation
+    }
+
+    // IndexedDB setup for storing directory handle
+    let db;
+    const dbName = 'SchemaManagerDB';
+    const storeName = 'directory';
+
+    async function initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(dbName, 1);
+            request.onupgradeneeded = (event) => {
+                db = event.target.result;
+                if (!db.objectStoreNames.contains(storeName)) {
+                    db.createObjectStore(storeName);
+                }
+            };
+            request.onsuccess = (event) => {
+                db = event.target.result;
+                resolve();
+            };
+            request.onerror = (event) => {
+                reject(event.target.error);
+            };
+        });
+    }
+
+    async function saveDirectoryHandle(handle) {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            const request = store.put(handle, 'schemasDirectory');
+            request.onsuccess = () => resolve();
+            request.onerror = (event) => reject(event.target.error);
+        });
+    }
+
+    async function getDirectoryHandleFromDB() {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([storeName], 'readonly');
+            const store = transaction.objectStore(storeName);
+            const request = store.get('schemasDirectory');
+            request.onsuccess = async (event) => {
+                const handle = event.target.result;
+                if (handle) {
+                    // Check if we still have permission
+                    const permission = await handle.queryPermission({ mode: 'readwrite' });
+                    if (permission === 'granted') {
+                        resolve(handle);
+                        return;
+                    }
+                }
+                resolve(null);
+            };
+            request.onerror = (event) => reject(event.target.error);
+        });
+    }
+
+    async function removeDirectoryHandleFromDB() {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            const request = store.delete('schemasDirectory');
+            request.onsuccess = () => resolve();
+            request.onerror = (event) => reject(event.target.error);
+        });
+    }
+
+    // File system operations
+    async function selectDirectory() {
+        try {
+            let options = {
+                id: 'schemas-directory',
+                mode: 'readwrite'
+            };
+
+            // Attempt to get the stored directory handle
+            const storedHandle = await getDirectoryHandleFromDB();
+            if (storedHandle) {
+                options.startIn = storedHandle;
+            } else {
+                options.startIn = 'documents';
+            }
+
+            dirHandle = await window.showDirectoryPicker(options);
+            
+            // Verify that the selected directory is different from the stored one
+            if (storedHandle && dirHandle.name !== storedHandle.name) {
+                // Remove old handle from DB
+                await removeDirectoryHandleFromDB();
+            }
+
+            // Update folder path display
+            document.getElementById('folderPath').textContent = dirHandle.name;
+            await loadSchemas();
+            showToast('Folder selected successfully!', 'success');
+
+            // Store the directory handle for future use
+            await saveDirectoryHandle(dirHandle);
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                showToast('Error selecting folder: ' + error.message, 'error');
+            }
+        }
+    }
+
+    async function loadSchemas() {
+        if (!dirHandle) return;
+
+        const select = document.getElementById('loadSchemaSelect');
+        select.innerHTML = '<option value="">Select a schema to load...</option>';
+
+        try {
+            for await (const entry of dirHandle.values()) {
+                if (entry.kind === 'file' && entry.name.endsWith('.schema.json')) {
+                    const option = document.createElement('option');
+                    option.value = entry.name;
+                    option.textContent = entry.name;
+                    select.appendChild(option);
+                }
+            }
+        } catch (error) {
+            showToast('Error loading schemas: ' + error.message, 'error');
+        }
+    }
+
+    async function loadSchemaFile(filename) {
+        try {
+            const fileHandle = await dirHandle.getFileHandle(filename);
+            currentSchemaHandle = fileHandle;
+            const file = await fileHandle.getFile();
+            const content = await file.text();
+            
+            // Parse and format the JSON before setting it in the editor
+            const formattedContent = JSON.stringify(JSON.parse(content), null, 2);
+            editor.setValue(formattedContent);
+            editor.clearSelection();
+            
+            showToast('Schema loaded successfully!', 'success');
+        } catch (error) {
+            showToast('Error loading schema: ' + error.message, 'error');
+        }
+    }
+
+    async function saveSchema() {
+        if (!dirHandle) {
+            showToast('Please select a schemas folder first', 'error');
+            return;
+        }
+
+        try {
+            const schemaContent = editor.getValue();
+            // Validate JSON
+            const schema = JSON.parse(schemaContent);
+            
+            // Basic schema validation
+            if (!schema.name) {
+                throw new Error('Schema must have a name property');
+            }
+            if (!schema.properties) {
+                throw new Error('Schema must have properties defined');
+            }
+
+            let fileHandle;
+            const fileName = `${schema.name.replace('add_', '')}.schema.json`;
+
+            try {
+                fileHandle = await dirHandle.getFileHandle(fileName);
+                // If file exists, confirm overwrite
+                if (!confirm(`Schema ${fileName} already exists. Do you want to overwrite it?`)) {
+                    return;
+                }
+            } catch {
+                // File doesn't exist, create new one
+                fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+            }
+
+            // Write the new content
+            const writable = await fileHandle.createWritable();
+            await writable.write(JSON.stringify(schema, null, 2));
+            await writable.close();
+
+            currentSchemaHandle = fileHandle;
+            await loadSchemas();
+            showToast('Schema saved successfully!', 'success');
+        } catch (error) {
+            showToast('Error saving schema: ' + error.message, 'error');
+        }
+    }
+
+    async function deleteSchema() {
+        if (!currentSchemaHandle) {
+            showToast('Please select a schema to delete', 'error');
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to delete ${currentSchemaHandle.name}? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            await dirHandle.removeEntry(currentSchemaHandle.name);
+            editor.setValue('');
+            currentSchemaHandle = null;
+            await loadSchemas();
+            showToast('Schema deleted successfully!', 'success');
+        } catch (error) {
+            showToast('Error deleting schema: ' + error.message, 'error');
+        }
+    }
+
+    // Schema generation and property management
+    function createPropertyTemplate() {
+        return `
+            <div class="property">
+                <div class="property-header">
+                    <h3>Property</h3>
+                    <button class="btn btn-danger" onclick="removeProperty(this)">Remove</button>
+                </div>
+                <div class="property-row large">
+                    <div class="form-group">
+                        <label>Name:</label>
+                        <input type="text" class="property-name" placeholder="Property">
+                    </div>
+                    <div class="form-group description-input">
+                        <label>Description:</label>
+                        <input type="text" class="property-description" placeholder="Property description">
+                    </div>
+                    <div class="form-group">
+                        <label>Type:</label>
+                        <select class="property-type" onchange="handlePropertyTypeChange(this)">
+                            <option value="string">String</option>
+                            <option value="array">Array</option>
+                        </select>
+                    </div>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="property-required">
+                            Required
+                        </label>
+                    </div>
+                </div>
+                <div class="property-row small">
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="property-enum" onchange="toggleEnumFields(this)">
+                            Is Enum
+                        </label>
+                        <input type="text" class="enum-values-input conditional-input" placeholder="e.g., active, inactive, pending" style="display: none;">
+                    </div>
+                </div>
+                <div class="property-row small">
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="property-relationship" onchange="toggleRelationshipFields(this)">
+                            Is Relationship
+                        </label>
+                        <input type="text" class="edge-type conditional-input" placeholder="e.g., owns, belongs_to" style="display: none;">
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function createNamePropertyTemplate() { // Removed schemaName parameter
+        return `
+            <div class="property" id="property-name-property">
+                <div class="property-header">
+                    <h3>Name Property</h3>
+                </div>
+                <div class="property-row large">
+                    <div class="form-group">
+                        <label>Name:</label>
+                        <input type="text" class="property-name" value="name" disabled>
+                    </div>
+                    <div class="form-group description-input">
+                        <label>Description:</label>
+                        <input type="text" class="property-description" 
+                               placeholder="Property description">
+                    </div>
+                    <div class="form-group">
+                        <label>Type:</label>
+                        <select class="property-type" disabled>
+                            <option value="string" selected>String</option>
+                        </select>
+                    </div>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="property-required" checked disabled>
+                            Required
+                        </label>
+                    </div>
+                </div>
+                <div class="property-row small">
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="property-enum" disabled>
+                            Is Enum
+                        </label>
+                        <input type="text" class="enum-values-input conditional-input" placeholder="e.g., active, inactive, pending" style="display: none;" disabled>
+                    </div>
+                </div>
+                <div class="property-row small">
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="property-relationship" disabled>
+                            Is Relationship
+                        </label>
+                        <input type="text" class="edge-type conditional-input" placeholder="e.g., owns, belongs_to" style="display: none;" disabled>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function handlePropertyTypeChange(select) {
+        const property = select.closest('.property');
+        // Since we limited to string and array, no need to handle enum based on type
+        // Enum is now handled via a separate checkbox
+    }
+
+    function toggleEnumFields(checkbox) {
+        const property = checkbox.closest('.property');
+        const enumInput = property.querySelector('.enum-values-input');
+        enumInput.style.display = checkbox.checked ? 'block' : 'none';
+    }
+
+    function toggleRelationshipFields(checkbox) {
+        const property = checkbox.closest('.property');
+        const relationshipInput = property.querySelector('.edge-type');
+        relationshipInput.style.display = checkbox.checked ? 'block' : 'none';
+    }
+
+    function addProperty() {
+        const container = document.getElementById('propertiesContainer');
+        container.insertAdjacentHTML('beforeend', createPropertyTemplate());
+    }
+
+    function removeProperty(button) {
+        const property = button.closest('.property');
+        property.remove();
+    }
+
+    // Removed updateNameProperty function
+
+    function viewRawSchema() {
+        generateSchema();
+    }
+
+    function generateSchema() {
+        const name = document.getElementById('schemaName').value;
+        const description = document.getElementById('schemaDescription').value;
+        const allowAdditionalProps = document.getElementById('allowAdditionalProps').checked;
+        
+        if (!name) {
+            showToast('Schema name is required', 'error');
+            return;
+        }
+
+        const properties = {};
+        document.querySelectorAll('.property').forEach(prop => {
+            // Skip the Name Property
+            if (prop.id === 'property-name-property') return;
+
+            const propName = prop.querySelector('.property-name').value;
+            if (!propName) return;
+
+            const propDesc = prop.querySelector('.property-description').value;
+            const propType = prop.querySelector('.property-type').value;
+            const required = prop.querySelector('.property-required').checked;
+            const isEnum = prop.querySelector('.property-enum').checked;
+            const enumValues = isEnum ? prop.querySelector('.enum-values-input')?.value
+                .split(',')
+                .map(v => v.trim())
+                .filter(v => v) : null;
+            const isRelationship = prop.querySelector('.property-relationship').checked;
+            const edgeType = isRelationship ? prop.querySelector('.edge-type').value : null;
+
+            const property = {
+                type: propType,
+                description: propDesc,
+                required: required
+            };
+
+            if (isEnum && enumValues) {
+                property.enum = enumValues;
+            }
+
+            if (isRelationship) {
+                property.relationship = {
+                    edgeType: edgeType,
+                    description: propDesc
+                };
+            }
+
+            properties[propName] = property;
+        });
+
+        // Handle the Name Property
+        const nameProp = document.querySelector('#property-name-property');
+        if (nameProp) {
+            const propName = nameProp.querySelector('.property-name').value; // Should be 'name'
+            const propDesc = nameProp.querySelector('.property-description').value;
+            const propType = nameProp.querySelector('.property-type').value;
+            const required = nameProp.querySelector('.property-required').checked;
+
+            properties[propName] = {
+                type: propType,
+                description: propDesc,
+                required: required
+            };
+        }
+
+        const schema = {
+            name: `add_${name}`,
+            description: description,
+            properties: properties,
+            additionalProperties: allowAdditionalProps
+        };
+
+        editor.setValue(JSON.stringify(schema, null, 2));
+        document.querySelector('[data-tab="viewRaw"]').click();
+    }
+
+    function editSchema() {
+        const select = document.getElementById('loadSchemaSelect');
+        const selectedFile = select.value;
+        if (!selectedFile) {
+            showToast('Please select a schema to edit.', 'error');
+            return;
+        }
+        loadSchemaIntoCreateTab(selectedFile);
+    }
+
+    async function loadSchemaIntoCreateTab(filename) {
+        try {
+            const fileHandle = await dirHandle.getFileHandle(filename);
+            const file = await fileHandle.getFile();
+            const content = await file.text();
+            const schema = JSON.parse(content);
+
+            // Populate schemaName and schemaDescription
+            document.getElementById('schemaName').value = schema.name.replace(/^add_/, '');
+            document.getElementById('schemaDescription').value = schema.description;
+
+            // Clear existing properties except the Name Property
+            const propertiesContainer = document.getElementById('propertiesContainer');
+            propertiesContainer.innerHTML = createNamePropertyTemplate();
+
+            // Populate the Description of the Name Property
+            const namePropertyDescriptionInput = document.querySelector('#property-name-property .property-description');
+            if (namePropertyDescriptionInput) {
+                namePropertyDescriptionInput.value = schema.properties.name.description;
+            }
+
+            // Add properties from schema
+            for (const [propName, propDetails] of Object.entries(schema.properties)) {
+                if (propName === 'name') continue; // Skip the Name Property
+                propertiesContainer.insertAdjacentHTML('beforeend', generatePropertyHTML(propName, propDetails));
+            }
+
+            // Switch to the Create Schema tab
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector('.tab[data-tab="create"]').classList.add('active');
+            document.getElementById('createSchema').classList.add('active');
+
+            showToast('Schema loaded into Create Schema tab for editing.', 'success');
+        } catch (error) {
+            showToast('Error editing schema: ' + error.message, 'error');
+        }
+    }
+
+    function generatePropertyHTML(propName, propDetails) {
+        let enumSection = '';
+        if (propDetails.enum && Array.isArray(propDetails.enum)) {
+            enumSection = `
+                <input type="text" class="enum-values-input conditional-input" value="${propDetails.enum.join(', ')}" placeholder="e.g., active, inactive, pending" style="display: block;">
+            `;
+        } else {
+            enumSection = `
+                <input type="text" class="enum-values-input conditional-input" placeholder="e.g., active, inactive, pending" style="display: none;">
+            `;
+        }
+
+        let relationshipSection = '';
+        if (propDetails.relationship && propDetails.relationship.edgeType) {
+            relationshipSection = `
+                <input type="text" class="edge-type conditional-input" value="${propDetails.relationship.edgeType}" placeholder="e.g., owns, belongs_to" style="display: block;">
+            `;
+        } else {
+            relationshipSection = `
+                <input type="text" class="edge-type conditional-input" placeholder="e.g., owns, belongs_to" style="display: none;">
+            `;
+        }
+
+        const isEnum = propDetails.enum && Array.isArray(propDetails.enum);
+        const isRelationship = propDetails.relationship && propDetails.relationship.edgeType;
+
+        return `
+            <div class="property">
+                <div class="property-header">
+                    <h3>Property</h3>
+                    <button class="btn btn-danger" onclick="removeProperty(this)">Remove</button>
+                </div>
+                <div class="property-row large">
+                    <div class="form-group">
+                        <label>Name:</label>
+                        <input type="text" class="property-name" value="${propName}" placeholder="Property name">
+                    </div>
+                    <div class="form-group description-input">
+                        <label>Description:</label>
+                        <input type="text" class="property-description" value="${propDetails.description}" placeholder="Property description">
+                    </div>
+                    <div class="form-group">
+                        <label>Type:</label>
+                        <select class="property-type" onchange="handlePropertyTypeChange(this)">
+                            <option value="string" ${propDetails.type === 'string' ? 'selected' : ''}>String</option>
+                            <option value="array" ${propDetails.type === 'array' ? 'selected' : ''}>Array</option>
+                        </select>
+                    </div>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="property-required" ${propDetails.required ? 'checked' : ''}>
+                            Required
+                        </label>
+                    </div>
+                </div>
+                <div class="property-row small">
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="property-enum" onchange="toggleEnumFields(this)" ${isEnum ? 'checked' : ''}>
+                            Is Enum
+                        </label>
+                        ${enumSection}
+                    </div>
+                </div>
+                <div class="property-row small">
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="property-relationship" onchange="toggleRelationshipFields(this)" ${isRelationship ? 'checked' : ''}>
+                            Is Relationship
+                        </label>
+                        ${relationshipSection}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab + 'Schema').classList.add('active');
+        });
+    });
+
+    // Schema loading
+    document.getElementById('loadSchemaSelect').addEventListener('change', (e) => {
+        if (e.target.value) {
+            loadSchemaFile(e.target.value);
+        }
+    });
+
+    // Initialize the application
+    async function initialize() {
+        try {
+            await initDB();
+        } catch (error) {
+            showToast('Error initializing database: ' + error.message, 'error');
+            return;
+        }
+
+        // Check for File System Access API support
+        if (!('showDirectoryPicker' in window)) {
+            showToast('Your browser does not support the File System Access API. Please use a modern browser like Chrome or Edge.', 'error', 0);
+            return;
+        }
+
+        // Attempt to retrieve the stored directory handle
+        try {
+            const storedHandle = await getDirectoryHandleFromDB();
+            if (storedHandle) {
+                // Verify permissions
+                const permission = await storedHandle.queryPermission({ mode: 'readwrite' });
+                if (permission === 'granted') {
+                    dirHandle = storedHandle;
+                    document.getElementById('folderPath').textContent = dirHandle.name;
+                    await loadSchemas();
+                    showToast('Loaded previously selected folder.', 'success');
+                } else {
+                    // Request permission
+                    const requestPermission = await storedHandle.requestPermission({ mode: 'readwrite' });
+                    if (requestPermission === 'granted') {
+                        dirHandle = storedHandle;
+                        document.getElementById('folderPath').textContent = dirHandle.name;
+                        await loadSchemas();
+                        showToast('Loaded previously selected folder.', 'success');
+                    } else {
+                        // Permission denied, remove handle from DB
+                        await removeDirectoryHandleFromDB();
+                        showToast('Permission to access the previously selected folder was denied.', 'error');
+                    }
+                }
+            }
+        } catch (error) {
+            showToast('Error accessing stored folder: ' + error.message, 'error');
+        }
+
+        // Add name property with fixed name
+        const container = document.getElementById('propertiesContainer');
+        container.innerHTML = createNamePropertyTemplate();
+
+        // Add one empty property
+        addProperty();
+    }
+
+    // Reset Form Functionality
+    function resetForm() {
+        if (!confirm('Are you sure you want to reset the form? All unsaved changes will be lost.')) {
+            return;
+        }
+
+        // Clear Schema Name and Description
+        document.getElementById('schemaName').value = '';
+        document.getElementById('schemaDescription').value = '';
+
+        // Reset Allow Additional Properties to checked
+        document.getElementById('allowAdditionalProps').checked = true;
+
+        // Reset Properties Container
+        const propertiesContainer = document.getElementById('propertiesContainer');
+        propertiesContainer.innerHTML = createNamePropertyTemplate();
+
+        // Add one empty property
+        addProperty();
+
+        showToast('Form has been reset to default state.', 'success');
+    }
+
+    // Start the application
+    initialize();
+</script>
+</body>
+</html>
