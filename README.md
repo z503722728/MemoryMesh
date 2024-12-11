@@ -11,7 +11,7 @@ MemoryMesh is a local knowledge graph server that can store, update, and recall 
 * **Metadata Expansion:** Define required, optional, and enumerated fields on nodes. This structure **guides AI**, ensuring it provides the information you need.
 * **Relationships Made Easy:** By including relationship definitions within schemas, **AI will be forced** to create edges and related nodes.
 * **AI Awareness:** Tools are designed to **inform the AI about the data that is expected**. The AI can use these tools to maintain a consistent and accurate knowledge graph as the narrative or data scenario progresses.
-* **Update nodes and edges**: added update tool.
+* **Update nodes and edges**: An update tool has been added to modify nodes and edges.
 * **Event Support:** An event system is in place to track operations _(still not fully tested)_.
 
 ### Nodes and edges
@@ -150,7 +150,7 @@ The prompt I used for testing:
 > 
 > [After I provide a list all available tools with their description.]
 
-You can always instruct AI to perform certain actions directly in the chat _(give me an artifact, make this npc an elf, etc.)_, including _"update memory"_, which I use before moving conversation to another chat when I face the _"Long chats cause..."_ tip. Then copy the last AI's message from chat, answer to it and instruct to continue the story.
+You can always instruct AI to perform certain actions directly in the chat _(give me an artifact, make this npc an elf, etc.)_, including _"update memory"_, which I use before moving conversation to another chat when I face the _"Long chats cause..."_ tip. Then copy the last AI's message from the chat, respond to it, and instruct it to continue the story.
 
 What I usually do is I start a session with an empty file and ask AI to start the game, providing any info about the PC. AI adds all necessary entities on the fly as the story develops.
 
@@ -158,12 +158,12 @@ What I usually do is I start a session with an empty file and ask AI to start th
 1. A [simple example](https://pastebin.com/0HvKg5FZ) with custom instructions.
 2. An example for the sake of example, with visualization _(NOT part of the functionality)_
 
-> Add a a couple of cities, some npcs, couple locations around the city to explore, hide an artifact or two somewhere
+> Add a couple of cities, some npcs, couple locations around the city to explore, hide an artifact or two somewhere
 
 ![image](https://github.com/user-attachments/assets/508d5903-2896-4665-a892-cdb7b81dfba6)
 
 ## Installation
-Installation instruction provided by Claude with MCP knowledge and modified by me after testing. I don't have experience with JS, git and coding in general, so I would appreciate any assistance in organizing this section.
+Installation instruction provided by Claude with MCP knowledge and modified by me after testing. I would appreciate any assistance in organizing this section.
 
 ### Prerequisites
 Node.js 18 or higher
@@ -222,12 +222,9 @@ Add the following to your Claude Desktop configuration file:
 2. Look for "memorymesh" in the MCP servers list (🔌 icon)
 3. The server should show as connected
 
-## Known Issues
-1. You may occasionally see messages like "Error executing code: MCP error -32603: MCP error -32603: Error processing tool call: location "..." not found". These messages are enabled for debugging and do not affect functionality.
-2. The AI tends to avoid deleting nodes unless explicitly instructed to do so.
-3. Occasionally AI adds information in generic metada field that fits better in set properties, you can try `additionalProperties: false` to prevent that.
+## Limitations
+1. **Debug Messages:** You may occasionally encounter messages such as: "Error executing code: MCP error -32603: MCP error -32603: Error processing tool call: location "..." not found". These messages are enabled for debugging and do not affect functionality.
+2. **Node Deletion:** The AI often avoids deleting nodes unless explicitly instructed.
 
 ## Contribution
 This project is a personal exploration into integrating structured data with AI reasoning capabilities. Contributions, feedback, and ideas are welcome to push it further or inspire new projects.
-
-95% of coding done by Claude, 95% of documentation done by ChatGPT.
