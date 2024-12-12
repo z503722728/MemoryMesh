@@ -1,10 +1,11 @@
 // src/tools/DynamicSchemaToolRegistry.js
 import {promises as fs} from 'fs';
 import path from 'path';
-import {fileURLToPath} from 'url';
 import {SchemaLoader} from '../schema/loader/schemaLoader.js';
 import {createSchemaNode, handleSchemaUpdate, handleSchemaDelete} from "../schema/loader/schemaProcessor.js";
 import {ErrorCode, McpError} from "@modelcontextprotocol/sdk/types.js";
+import {CONFIG} from '../config/config.js';
+import {formatToolResponse, formatToolError} from '../utils/responseFormatter.js';
 
 /**
  * @class DynamicSchemaToolRegistry
@@ -31,15 +32,15 @@ class DynamicSchemaToolRegistry {
 
     /**
      * Initializes the registry by loading all schemas and generating corresponding tools.
+     * Uses the centralized configuration from CONFIG.PATHS.SCHEMAS_DIR to locate schema files.
      *
      * @returns {Promise<void>}
-     * @throws {Error} If initialization fails.
+     * @throws {Error} If initialization fails or if schema directory cannot be accessed
+     * @see {@link CONFIG} for path configurations
      */
     async initialize() {
         try {
-            // Define __dirname for ES modules
-            const __dirname = path.dirname(fileURLToPath(import.meta.url));
-            const SCHEMAS_DIR = path.join(__dirname, '..', '..', 'src', 'config', 'schemas');
+            const SCHEMAS_DIR = CONFIG.PATHS.SCHEMAS_DIR;
 
             // Load schema files
             const schemaFiles = await fs.readdir(SCHEMAS_DIR);
@@ -137,20 +138,22 @@ class DynamicSchemaToolRegistry {
     async handleToolCall(toolName, args, knowledgeGraphManager) {
         const match = toolName.match(/^(add|update|delete)_(.+)$/);
         if (!match) {
-            throw new McpError(
-                ErrorCode.MethodNotFound,
-                `Invalid tool name format: ${toolName}`
-            );
+            return formatToolError({
+                operation: toolName,
+                error: `Invalid tool name format: ${toolName}`,
+                suggestions: ["Ensure tool name follows 'add|update|delete_<schemaName>' format"]
+            });
         }
 
         const [, operation, schemaName] = match;
         const schema = this.schemas.get(schemaName);
 
         if (!schema) {
-            throw new McpError(
-                ErrorCode.MethodNotFound,
-                `Schema not found for: ${schemaName}`
-            );
+            return formatToolError({
+                operation: toolName,
+                error: `Schema not found for: ${schemaName}`,
+                suggestions: [`Verify that a schema named '${schemaName}' exists`]
+            });
         }
 
         try {
@@ -163,7 +166,11 @@ class DynamicSchemaToolRegistry {
                     );
                     await knowledgeGraphManager.addNodes(nodes);
                     await knowledgeGraphManager.addEdges(edges);
-                    return {toolResult: {nodes, edges}};
+                    return formatToolResponse({
+                        data: {nodes, edges},
+                        message: `Successfully added ${nodes.length} node(s) and ${edges.length} edge(s) for ${schemaName}`,
+                        actionTaken: `Added ${schemaName} to the knowledge graph`
+                    });
                 }
 
                 case 'update': {
@@ -173,41 +180,61 @@ class DynamicSchemaToolRegistry {
                         schemaName,
                         knowledgeGraphManager
                     );
-                    return {toolResult: {updatedNodes}};
+                    return formatToolResponse({
+                        data: {updatedNodes},
+                        message: `Successfully updated ${schemaName}`,
+                        actionTaken: `Updated ${schemaName} in the knowledge graph`
+                    });
                 }
 
                 case 'delete': {
                     const {name} = args[`delete_${schemaName}`];
                     if (!name) {
-                        throw new McpError(
-                            ErrorCode.InvalidParams,
-                            `Name is required to delete a ${schemaName}`
-                        );
+                        return formatToolError({
+                            operation: toolName,
+                            error: `Name is required to delete a ${schemaName}`,
+                            suggestions: [`Provide the 'name' of the ${schemaName} to delete`]
+                        });
                     }
                     const result = await handleSchemaDelete(
                         name,
                         schemaName,
                         knowledgeGraphManager
                     );
-                    return {toolResult: result};
+                    return formatToolResponse({
+                        data: result,
+                        message: `Successfully deleted ${schemaName}: ${name}`,
+                        actionTaken: `Deleted ${schemaName} from the knowledge graph`
+                    });
                 }
 
                 default:
-                    throw new McpError(
-                        ErrorCode.MethodNotFound,
-                        `Unknown operation: ${operation}`
-                    );
+                    return formatToolError({
+                        operation: toolName,
+                        error: `Unknown operation: ${operation}`,
+                        suggestions: ["Supported operations are 'add', 'update', and 'delete'"]
+                    });
             }
         } catch (error) {
-            // If it's already an MCP error, rethrow it
-            if (error instanceof McpError) {
-                throw error;
+            // Catch and reformat errors thrown by createSchemaNode, handleSchemaUpdate, or handleSchemaDelete
+            if (error instanceof Error) {
+                return formatToolError({
+                    operation: toolName,
+                    error: error.message,
+                    context: {input: args},
+                    suggestions: ["Review the error message and the provided arguments", "Check the schema definition for required fields and types"],
+                    recoverySteps: ["Modify the input to match the schema requirements", "If the error is related to data, consider correcting the data and retrying"]
+                });
+            } else {
+                // Handle unexpected error types
+                return formatToolError({
+                    operation: toolName,
+                    error: "An unexpected error occurred",
+                    context: {input: args, errorDetails: error},
+                    suggestions: ["Review the error details and the provided arguments"],
+                    recoverySteps: ["If the error persists, try a generic tool"]
+                });
             }
-            // Otherwise, wrap it in an MCP error
-            throw new McpError(
-                ErrorCode.InternalError,
-                `Error processing tool call: ${error.message}`
-            );
         }
     }
 }

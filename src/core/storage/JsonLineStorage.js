@@ -2,6 +2,7 @@
 import {promises as fs} from 'fs';
 import path from 'path';
 import {fileURLToPath} from 'url';
+import {CONFIG} from '../../config/config.js';
 
 /**
  * @class JsonLineStorage
@@ -44,8 +45,7 @@ export class JsonLineStorage {
      * @throws {Error} If reading the file fails for reasons other than the file not existing
      */
     async loadGraph() {
-        const __dirname = path.dirname(fileURLToPath(import.meta.url));
-        const MEMORY_FILE_PATH = path.join(__dirname, '../../data/memory.json');
+        const MEMORY_FILE_PATH = CONFIG.PATHS.MEMORY_FILE;
 
         try {
             const data = await fs.readFile(MEMORY_FILE_PATH, "utf-8");
