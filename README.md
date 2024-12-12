@@ -12,7 +12,8 @@ MemoryMesh is a local knowledge graph server that can store, update, and recall 
 * **Relationships Made Easy:** By including relationship definitions within schemas, **AI will be forced** to create edges and related nodes.
 * **AI Awareness:** Tools are designed to **inform the AI about the data that is expected**. The AI can use these tools to maintain a consistent and accurate knowledge graph as the narrative or data scenario progresses.
 * **Update nodes and edges**: An update tool has been added to modify nodes and edges.
-* **Event Support:** An event system is in place to track operations _(still not fully tested)_.
+* **Event Support:** An event system is in place to track operations.
+* **Informative error feedback** to the AI, helping it understand and potentially self-correct when tool calls fail.
 
 ### Nodes and edges
 Nodes represent entities or concepts. Each node includes:
@@ -223,8 +224,7 @@ Add the following to your Claude Desktop configuration file:
 3. The server should show as connected
 
 ## Limitations
-1. **Debug Messages:** You may occasionally encounter messages such as: "Error executing code: MCP error -32603: MCP error -32603: Error processing tool call: location "..." not found". These messages are enabled for debugging and do not affect functionality.
-2. **Node Deletion:** The AI often avoids deleting nodes unless explicitly instructed.
+1. **Node Deletion:** The AI often avoids deleting nodes unless explicitly instructed.
 
 ## Contribution
 This project is a personal exploration into integrating structured data with AI reasoning capabilities. Contributions, feedback, and ideas are welcome to push it further or inspire new projects.
