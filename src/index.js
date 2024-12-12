@@ -8,6 +8,8 @@ import {
 import {KnowledgeGraphManager} from './core/KnowledgeGraphManager.js';
 import {handleCallToolRequest} from './tools/callToolHandler.js';
 import {tools} from './tools/tools.js';
+import {CONFIG} from './config/config.js';
+import {formatToolError} from "./utils/responseFormatter.js";
 
 /**
  * Initializes and starts the Knowledge Graph MCP Server.
@@ -20,8 +22,8 @@ const knowledgeGraphManager = new KnowledgeGraphManager();
 
 // The server instance and tools exposed to Claude
 const server = new Server({
-    name: "memorymesh",
-    version: "0.1.3",
+    name: CONFIG.SERVER.NAME,
+    version: CONFIG.SERVER.VERSION,
 }, {
     capabilities: {
         tools: {},  // Removed listChanged since we're not using dynamic updates
@@ -45,7 +47,19 @@ async function main() {
         });
 
         server.setRequestHandler(CallToolRequestSchema, async (request) => {
-            return await handleCallToolRequest(request, knowledgeGraphManager);
+            try {
+                const result = await handleCallToolRequest(request, knowledgeGraphManager);
+                return result;
+            } catch (error) {
+                console.error("Error in handleCallToolRequest:", error);
+                return formatToolError({
+                    operation: "callTool",
+                    error: error.message,
+                    context: {request},
+                    suggestions: ["Examine the tool input parameters for correctness.", "Verify that the requested operation is supported."],
+                    recoverySteps: ["Adjust the input parameters based on the schema definition.", "If the error indicates a problem with the node or edge, ensure it exists and is correctly named."]
+                });
+            }
         });
 
         // Set up error handler

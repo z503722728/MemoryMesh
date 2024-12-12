@@ -3,6 +3,7 @@ import {promises as fs} from 'fs';
 import {SchemaBuilder} from './schemaBuilder.js';
 import {fileURLToPath} from 'url';
 import path from 'path';
+import {CONFIG} from '../../config/config.js';
 
 /**
  * @class SchemaLoader
@@ -17,8 +18,7 @@ export class SchemaLoader {
      * @throws {Error} If reading or parsing the schema file fails.
      */
     static async loadSchema(schemaName) {
-        const __dirname = path.dirname(fileURLToPath(import.meta.url));
-        const SCHEMAS_DIR = path.join(__dirname, '..', '..', 'config', 'schemas');
+        const SCHEMAS_DIR = CONFIG.PATHS.SCHEMAS_DIR;
         const schemaPath = path.join(SCHEMAS_DIR, `${schemaName}.schema.json`);
         const schemaContent = await fs.readFile(schemaPath, 'utf-8');
         const schema = JSON.parse(schemaContent);
