@@ -1,4 +1,5 @@
 # MemoryMesh
+[![smithery badge](https://smithery.ai/badge/memorymesh)](https://smithery.ai/protocol/memorymesh)
 
 This project is based on the [Knowledge Graph Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) from the MCP servers repository and retains its core functionality. For installation details beyond what’s provided here, refer to the original repository link above if needed. The main entry point of this application is the index.js file.
 
