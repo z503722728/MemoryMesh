@@ -166,6 +166,14 @@ What I usually do is I start a session with an empty file and ask AI to start th
 ## Installation
 Installation instruction provided by Claude with MCP knowledge and modified by me after testing. I would appreciate any assistance in organizing this section.
 
+### Installing via Smithery
+
+To install MemoryMesh for Claude Desktop automatically via [Smithery](https://smithery.ai/protocol/memorymesh):
+
+```bash
+npx @smithery/cli install memorymesh --client claude
+```
+
 ### Prerequisites
 Node.js 18 or higher
 npm (included with Node.js)
