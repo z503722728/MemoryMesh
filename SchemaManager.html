@@ -382,75 +382,78 @@
     </style>
 </head>
 <body>
-    <h1>Schema Manager</h1>
+<h1>Schema Manager</h1>
 
-    <div class="folder-section">
-        <button class="btn" onclick="selectDirectory()">Select Schemas Folder</button>
-        <div class="folder-path" id="folderPath">No folder selected</div>
+<div class="folder-section">
+    <button class="btn" id="selectDirectoryBtn">Select Schemas Folder</button>
+    <div class="folder-path" id="folderPath">No folder selected</div>
+</div>
+
+<!-- Toast Notifications Container -->
+<div id="toastContainer"></div>
+
+<div class="tabs">
+    <button class="tab active" data-tab="create">Create Schema</button>
+    <button class="tab" data-tab="viewRaw">View/Edit Schema (raw)</button>
+</div>
+
+<div id="createSchema" class="tab-content active">
+    <div class="form-group">
+        <label for="schemaName">Schema Name:</label>
+        <input type="text" id="schemaName" placeholder="Identifier for the schema and node type within the memory">
     </div>
 
-    <!-- Toast Notifications Container -->
-    <div id="toastContainer"></div>
-
-    <div class="tabs">
-        <button class="tab active" data-tab="create">Create Schema</button>
-        <button class="tab" data-tab="viewRaw">View/Edit Schema (raw)</button>
+    <div class="form-group">
+        <label for="schemaDescription">Schema Description:</label>
+        <input type="text" id="schemaDescription"
+               placeholder="Description for the add_<name> tool, providing context for the AI.">
     </div>
 
-    <div id="createSchema" class="tab-content active">
-        <div class="form-group">
-            <label for="schemaName">Schema Name:</label>
-            <input type="text" id="schemaName" placeholder="Identifier for the schema and node type within the memory">
-            <!-- Removed onInput="updateNameProperty()" -->
-        </div>
-
-        <div class="form-group">
-            <label for="schemaDescription">Schema Description:</label>
-            <input type="text" id="schemaDescription" placeholder="Description for the add_<name> tool, providing context for the AI.">
-        </div>
-
-        <div class="global-settings">
-            <div class="checkbox-group">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="allowAdditionalProps" checked>
-                    Allow Additional Properties
-                </label>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>Properties:</label>
-            <div id="propertiesContainer" class="properties-container">
-                <!-- Properties will be added here -->
-            </div>
-            <button class="btn" onclick="addProperty()">Add Property</button>
-        </div>
-
-        <div style="display: flex; gap: 1rem;">
-            <button class="btn" onclick="viewRawSchema()">View in Raw Format</button>
-            <button class="btn btn-danger" onclick="resetForm()">Reset</button>
+    <div class="global-settings">
+        <div class="checkbox-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="allowAdditionalProps" checked>
+                Allow Additional Properties
+            </label>
         </div>
     </div>
 
-    <div id="viewRawSchema" class="tab-content">
-        <select id="loadSchemaSelect">
-            <option value="">Select a schema to load...</option>
-        </select>
-        <div class="editor-container">
-            <div id="jsonEditor"></div>
+    <div class="form-group">
+        <label>Properties:</label>
+        <div id="propertiesContainer" class="properties-container">
+            <!-- Properties will be added here -->
         </div>
-        <div class="button-group" style="display: flex; gap: 1rem;">
-            <button class="btn" onclick="saveSchema()">Save Schema</button>
-            <button class="btn" onclick="editSchema()">Edit</button>
-            <button class="btn btn-danger" onclick="deleteSchema()">Delete Schema</button>
-        </div>
+        <button class="btn" id="addPropertyBtn">Add Property</button>
     </div>
+
+    <div style="display: flex; gap: 1rem;">
+        <button class="btn" id="viewRawSchemaBtn">View in Raw Format</button>
+        <button class="btn btn-danger" id="resetFormBtn">Reset</button>
+    </div>
+</div>
+
+<div id="viewRawSchema" class="tab-content">
+    <select id="loadSchemaSelect">
+        <option value="">Select a schema to load...</option>
+    </select>
+    <div class="editor-container">
+        <div id="jsonEditor"></div>
+    </div>
+    <div class="button-group" style="display: flex; gap: 1rem;">
+        <button class="btn" id="saveSchemaBtn">Save Schema</button>
+        <button class="btn" id="editSchemaBtn">Edit</button>
+        <button class="btn btn-danger" id="deleteSchemaBtn">Delete Schema</button>
+    </div>
+</div>
 <script>
-    // Global state
+    // --- Constants and State ---
+    const DB_NAME = 'SchemaManagerDB';
+    const STORE_NAME = 'directory';
+    let db = null;
     let dirHandle = null;
     let currentSchemaHandle = null;
 
-    // Initialize Ace editor
+    // --- Ace Editor Initialization ---
     const editor = ace.edit("jsonEditor");
     editor.setTheme("ace/theme/monokai");
     editor.session.setMode("ace/mode/json");
@@ -464,625 +467,565 @@
         enableSnippets: true
     });
 
-    // Toast Notifications
+    // --- Utility Functions ---
     function showToast(message, type = 'success', duration = 3000) {
         const toastContainer = document.getElementById('toastContainer');
-
         const toast = document.createElement('div');
-        toast.classList.add('toast');
-        toast.classList.add(type === 'success' ? 'toast-success' : 'toast-error');
+        toast.classList.add('toast', type === 'success' ? 'toast-success' : 'toast-error');
         toast.textContent = message;
-
         toastContainer.appendChild(toast);
-
-        // Remove toast after duration + animation time
-        setTimeout(() => {
-            toast.remove();
-        }, duration + 1000); // 1000ms accounts for fadeOut animation
+        setTimeout(() => toast.remove(), duration + 1000);
     }
 
-    // IndexedDB setup for storing directory handle
-    let db;
-    const dbName = 'SchemaManagerDB';
-    const storeName = 'directory';
-
-    async function initDB() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(dbName, 1);
-            request.onupgradeneeded = (event) => {
-                db = event.target.result;
-                if (!db.objectStoreNames.contains(storeName)) {
-                    db.createObjectStore(storeName);
-                }
-            };
-            request.onsuccess = (event) => {
-                db = event.target.result;
-                resolve();
-            };
-            request.onerror = (event) => {
-                reject(event.target.error);
-            };
-        });
-    }
-
-    async function saveDirectoryHandle(handle) {
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction([storeName], 'readwrite');
-            const store = transaction.objectStore(storeName);
-            const request = store.put(handle, 'schemasDirectory');
-            request.onsuccess = () => resolve();
-            request.onerror = (event) => reject(event.target.error);
-        });
-    }
-
-    async function getDirectoryHandleFromDB() {
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction([storeName], 'readonly');
-            const store = transaction.objectStore(storeName);
-            const request = store.get('schemasDirectory');
-            request.onsuccess = async (event) => {
-                const handle = event.target.result;
-                if (handle) {
-                    // Check if we still have permission
-                    const permission = await handle.queryPermission({ mode: 'readwrite' });
-                    if (permission === 'granted') {
-                        resolve(handle);
-                        return;
+    // --- IndexedDB Operations ---
+    const idb = {
+        initDB: async () => {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 1);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME);
                     }
-                }
-                resolve(null);
-            };
-            request.onerror = (event) => reject(event.target.error);
-        });
-    }
-
-    async function removeDirectoryHandleFromDB() {
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction([storeName], 'readwrite');
-            const store = transaction.objectStore(storeName);
-            const request = store.delete('schemasDirectory');
-            request.onsuccess = () => resolve();
-            request.onerror = (event) => reject(event.target.error);
-        });
-    }
-
-    // File system operations
-    async function selectDirectory() {
-        try {
-            let options = {
-                id: 'schemas-directory',
-                mode: 'readwrite'
-            };
-
-            // Attempt to get the stored directory handle
-            const storedHandle = await getDirectoryHandleFromDB();
-            if (storedHandle) {
-                options.startIn = storedHandle;
-            } else {
-                options.startIn = 'documents';
-            }
-
-            dirHandle = await window.showDirectoryPicker(options);
-            
-            // Verify that the selected directory is different from the stored one
-            if (storedHandle && dirHandle.name !== storedHandle.name) {
-                // Remove old handle from DB
-                await removeDirectoryHandleFromDB();
-            }
-
-            // Update folder path display
-            document.getElementById('folderPath').textContent = dirHandle.name;
-            await loadSchemas();
-            showToast('Folder selected successfully!', 'success');
-
-            // Store the directory handle for future use
-            await saveDirectoryHandle(dirHandle);
-        } catch (error) {
-            if (error.name !== 'AbortError') {
-                showToast('Error selecting folder: ' + error.message, 'error');
-            }
+                };
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    resolve();
+                };
+                request.onerror = (event) => reject(event.target.error);
+            });
+        },
+        saveDirectoryHandle: async (handle) => {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.put(handle, 'schemasDirectory');
+                request.onsuccess = () => resolve();
+                request.onerror = (event) => reject(event.target.error);
+            });
+        },
+        getDirectoryHandleFromDB: async () => {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.get('schemasDirectory');
+                request.onsuccess = async (event) => {
+                    const handle = event.target.result;
+                    if (handle) {
+                        const permission = await handle.queryPermission({mode: 'readwrite'});
+                        if (permission === 'granted') {
+                            resolve(handle);
+                            return;
+                        }
+                    }
+                    resolve(null);
+                };
+                request.onerror = (event) => reject(event.target.error);
+            });
+        },
+        removeDirectoryHandleFromDB: async () => {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.delete('schemasDirectory');
+                request.onsuccess = () => resolve();
+                request.onerror = (event) => reject(event.target.error);
+            });
         }
-    }
+    };
 
-    async function loadSchemas() {
-        if (!dirHandle) return;
-
-        const select = document.getElementById('loadSchemaSelect');
-        select.innerHTML = '<option value="">Select a schema to load...</option>';
-
-        try {
-            for await (const entry of dirHandle.values()) {
-                if (entry.kind === 'file' && entry.name.endsWith('.schema.json')) {
-                    const option = document.createElement('option');
-                    option.value = entry.name;
-                    option.textContent = entry.name;
-                    select.appendChild(option);
-                }
-            }
-        } catch (error) {
-            showToast('Error loading schemas: ' + error.message, 'error');
-        }
-    }
-
-    async function loadSchemaFile(filename) {
-        try {
-            const fileHandle = await dirHandle.getFileHandle(filename);
-            currentSchemaHandle = fileHandle;
-            const file = await fileHandle.getFile();
-            const content = await file.text();
-            
-            // Parse and format the JSON before setting it in the editor
-            const formattedContent = JSON.stringify(JSON.parse(content), null, 2);
-            editor.setValue(formattedContent);
-            editor.clearSelection();
-            
-            showToast('Schema loaded successfully!', 'success');
-        } catch (error) {
-            showToast('Error loading schema: ' + error.message, 'error');
-        }
-    }
-
-    async function saveSchema() {
-        if (!dirHandle) {
-            showToast('Please select a schemas folder first', 'error');
-            return;
-        }
-
-        try {
-            const schemaContent = editor.getValue();
-            // Validate JSON
-            const schema = JSON.parse(schemaContent);
-            
-            // Basic schema validation
-            if (!schema.name) {
-                throw new Error('Schema must have a name property');
-            }
-            if (!schema.properties) {
-                throw new Error('Schema must have properties defined');
-            }
-
-            let fileHandle;
-            const fileName = `${schema.name.replace('add_', '')}.schema.json`;
-
+    // --- File System Operations ---
+    const fileSystem = {
+        selectDirectory: async () => {
             try {
-                fileHandle = await dirHandle.getFileHandle(fileName);
-                // If file exists, confirm overwrite
-                if (!confirm(`Schema ${fileName} already exists. Do you want to overwrite it?`)) {
+                let options = {id: 'schemas-directory', mode: 'readwrite'};
+                const storedHandle = await idb.getDirectoryHandleFromDB();
+                options.startIn = storedHandle || 'documents';
+                dirHandle = await window.showDirectoryPicker(options);
+                if (storedHandle && dirHandle.name !== storedHandle.name) {
+                    await idb.removeDirectoryHandleFromDB();
+                }
+                document.getElementById('folderPath').textContent = dirHandle.name;
+                await ui.loadSchemas();
+                showToast('Folder selected successfully!', 'success');
+                await idb.saveDirectoryHandle(dirHandle);
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    showToast('Error selecting folder: ' + error.message, 'error');
+                }
+            }
+        },
+        loadSchemaFile: async (filename) => {
+            try {
+                const fileHandle = await dirHandle.getFileHandle(filename);
+                currentSchemaHandle = fileHandle;
+                const file = await fileHandle.getFile();
+                const content = await file.text();
+                const formattedContent = JSON.stringify(JSON.parse(content), null, 2);
+                editor.setValue(formattedContent);
+                editor.clearSelection();
+                showToast('Schema loaded successfully!', 'success');
+            } catch (error) {
+                showToast('Error loading schema: ' + error.message, 'error');
+            }
+        },
+        saveSchema: async () => {
+            if (!dirHandle) {
+                showToast('Please select a schemas folder first', 'error');
+                return;
+            }
+            try {
+                const schemaContent = editor.getValue();
+                const schema = JSON.parse(schemaContent);
+                if (!schema.name) throw new Error('Schema must have a name property');
+                if (!schema.properties) throw new Error('Schema must have properties defined');
+
+                // Check for schema name uniqueness before saving
+                const isSchemaNameUnique = await schemaValidator.isSchemaNameUnique(schema.name);
+                if (!isSchemaNameUnique) {
+                    showToast(`A schema with the name "${schema.name}" already exists. Please choose a unique name.`, 'error');
                     return;
                 }
-            } catch {
-                // File doesn't exist, create new one
-                fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+
+                const fileName = `${schema.name.replace('add_', '')}.schema.json`;
+                let fileHandle;
+                try {
+                    fileHandle = await dirHandle.getFileHandle(fileName);
+                    if (!confirm(`Schema ${fileName} already exists. Do you want to overwrite it?`)) return;
+                } catch {
+                    fileHandle = await dirHandle.getFileHandle(fileName, {create: true});
+                }
+                const writable = await fileHandle.createWritable();
+                await writable.write(JSON.stringify(schema, null, 2));
+                await writable.close();
+                currentSchemaHandle = fileHandle;
+                await ui.loadSchemas();
+                showToast('Schema saved successfully!', 'success');
+            } catch (error) {
+                showToast('Error saving schema: ' + error.message, 'error');
             }
-
-            // Write the new content
-            const writable = await fileHandle.createWritable();
-            await writable.write(JSON.stringify(schema, null, 2));
-            await writable.close();
-
-            currentSchemaHandle = fileHandle;
-            await loadSchemas();
-            showToast('Schema saved successfully!', 'success');
-        } catch (error) {
-            showToast('Error saving schema: ' + error.message, 'error');
-        }
-    }
-
-    async function deleteSchema() {
-        if (!currentSchemaHandle) {
-            showToast('Please select a schema to delete', 'error');
-            return;
-        }
-
-        if (!confirm(`Are you sure you want to delete ${currentSchemaHandle.name}? This action cannot be undone.`)) {
-            return;
-        }
-
-        try {
-            await dirHandle.removeEntry(currentSchemaHandle.name);
-            editor.setValue('');
-            currentSchemaHandle = null;
-            await loadSchemas();
-            showToast('Schema deleted successfully!', 'success');
-        } catch (error) {
-            showToast('Error deleting schema: ' + error.message, 'error');
-        }
-    }
-
-    // Schema generation and property management
-    function createPropertyTemplate() {
-        return `
-            <div class="property">
-                <div class="property-header">
-                    <h3>Property</h3>
-                    <button class="btn btn-danger" onclick="removeProperty(this)">Remove</button>
-                </div>
-                <div class="property-row large">
-                    <div class="form-group">
-                        <label>Name:</label>
-                        <input type="text" class="property-name" placeholder="Property">
-                    </div>
-                    <div class="form-group description-input">
-                        <label>Description:</label>
-                        <input type="text" class="property-description" placeholder="Property description">
-                    </div>
-                    <div class="form-group">
-                        <label>Type:</label>
-                        <select class="property-type" onchange="handlePropertyTypeChange(this)">
-                            <option value="string">String</option>
-                            <option value="array">Array</option>
-                        </select>
-                    </div>
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" class="property-required">
-                            Required
-                        </label>
-                    </div>
-                </div>
-                <div class="property-row small">
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" class="property-enum" onchange="toggleEnumFields(this)">
-                            Is Enum
-                        </label>
-                        <input type="text" class="enum-values-input conditional-input" placeholder="e.g., active, inactive, pending" style="display: none;">
-                    </div>
-                </div>
-                <div class="property-row small">
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" class="property-relationship" onchange="toggleRelationshipFields(this)">
-                            Is Relationship
-                        </label>
-                        <input type="text" class="edge-type conditional-input" placeholder="e.g., owns, belongs_to" style="display: none;">
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    function createNamePropertyTemplate() { // Removed schemaName parameter
-        return `
-            <div class="property" id="property-name-property">
-                <div class="property-header">
-                    <h3>Name Property</h3>
-                </div>
-                <div class="property-row large">
-                    <div class="form-group">
-                        <label>Name:</label>
-                        <input type="text" class="property-name" value="name" disabled>
-                    </div>
-                    <div class="form-group description-input">
-                        <label>Description:</label>
-                        <input type="text" class="property-description" 
-                               placeholder="Property description">
-                    </div>
-                    <div class="form-group">
-                        <label>Type:</label>
-                        <select class="property-type" disabled>
-                            <option value="string" selected>String</option>
-                        </select>
-                    </div>
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" class="property-required" checked disabled>
-                            Required
-                        </label>
-                    </div>
-                </div>
-                <div class="property-row small">
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" class="property-enum" disabled>
-                            Is Enum
-                        </label>
-                        <input type="text" class="enum-values-input conditional-input" placeholder="e.g., active, inactive, pending" style="display: none;" disabled>
-                    </div>
-                </div>
-                <div class="property-row small">
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" class="property-relationship" disabled>
-                            Is Relationship
-                        </label>
-                        <input type="text" class="edge-type conditional-input" placeholder="e.g., owns, belongs_to" style="display: none;" disabled>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    function handlePropertyTypeChange(select) {
-        const property = select.closest('.property');
-        // Since we limited to string and array, no need to handle enum based on type
-        // Enum is now handled via a separate checkbox
-    }
-
-    function toggleEnumFields(checkbox) {
-        const property = checkbox.closest('.property');
-        const enumInput = property.querySelector('.enum-values-input');
-        enumInput.style.display = checkbox.checked ? 'block' : 'none';
-    }
-
-    function toggleRelationshipFields(checkbox) {
-        const property = checkbox.closest('.property');
-        const relationshipInput = property.querySelector('.edge-type');
-        relationshipInput.style.display = checkbox.checked ? 'block' : 'none';
-    }
-
-    function addProperty() {
-        const container = document.getElementById('propertiesContainer');
-        container.insertAdjacentHTML('beforeend', createPropertyTemplate());
-    }
-
-    function removeProperty(button) {
-        const property = button.closest('.property');
-        property.remove();
-    }
-
-    // Removed updateNameProperty function
-
-    function viewRawSchema() {
-        generateSchema();
-    }
-
-    function generateSchema() {
-        const name = document.getElementById('schemaName').value;
-        const description = document.getElementById('schemaDescription').value;
-        const allowAdditionalProps = document.getElementById('allowAdditionalProps').checked;
-        
-        if (!name) {
-            showToast('Schema name is required', 'error');
-            return;
-        }
-
-        const properties = {};
-        document.querySelectorAll('.property').forEach(prop => {
-            // Skip the Name Property
-            if (prop.id === 'property-name-property') return;
-
-            const propName = prop.querySelector('.property-name').value;
-            if (!propName) return;
-
-            const propDesc = prop.querySelector('.property-description').value;
-            const propType = prop.querySelector('.property-type').value;
-            const required = prop.querySelector('.property-required').checked;
-            const isEnum = prop.querySelector('.property-enum').checked;
-            const enumValues = isEnum ? prop.querySelector('.enum-values-input')?.value
-                .split(',')
-                .map(v => v.trim())
-                .filter(v => v) : null;
-            const isRelationship = prop.querySelector('.property-relationship').checked;
-            const edgeType = isRelationship ? prop.querySelector('.edge-type').value : null;
-
-            const property = {
-                type: propType,
-                description: propDesc,
-                required: required
-            };
-
-            if (isEnum && enumValues) {
-                property.enum = enumValues;
+        },
+        deleteSchema: async () => {
+            if (!currentSchemaHandle) {
+                showToast('Please select a schema to delete', 'error');
+                return;
             }
+            if (!confirm(`Are you sure you want to delete ${currentSchemaHandle.name}? This action cannot be undone.`)) return;
+            try {
+                await dirHandle.removeEntry(currentSchemaHandle.name);
+                editor.setValue('');
+                currentSchemaHandle = null;
+                await ui.loadSchemas();
+                showToast('Schema deleted successfully!', 'success');
+            } catch (error) {
+                showToast('Error deleting schema: ' + error.message, 'error');
+            }
+        }
+    };
 
-            if (isRelationship) {
-                property.relationship = {
-                    edgeType: edgeType,
-                    description: propDesc
+    // --- Schema Generation and Validation ---
+    const schemaGenerator = {
+        generateSchema: () => {
+            const name = document.getElementById('schemaName').value;
+            const description = document.getElementById('schemaDescription').value;
+            const allowAdditionalProps = document.getElementById('allowAdditionalProps').checked;
+
+            if (!name) {
+                showToast('Schema name is required', 'error');
+                return;
+            }
+            // Real-time validation for schema name uniqueness
+            const isSchemaNameUnique = schemaValidator.isSchemaNameUnique(name, dirHandle);
+            if (!isSchemaNameUnique) {
+                showToast('Schema name must be unique', 'error');
+                return;
+            }
+            const properties = {};
+            document.querySelectorAll('.property').forEach(prop => {
+                if (prop.id === 'property-name-property') return;
+                const propName = prop.querySelector('.property-name').value;
+                if (!propName) return;
+                const propDesc = prop.querySelector('.property-description').value;
+                const propType = prop.querySelector('.property-type').value;
+                const required = prop.querySelector('.property-required').checked;
+                const isEnum = prop.querySelector('.property-enum').checked;
+                const enumValues = isEnum ? prop.querySelector('.enum-values-input')?.value
+                    .split(',')
+                    .map(v => v.trim())
+                    .filter(v => v) : null;
+                const isRelationship = prop.querySelector('.property-relationship').checked;
+                const edgeType = isRelationship ? prop.querySelector('.edge-type').value : null;
+                const property = {
+                    type: propType,
+                    description: propDesc,
+                    required: required
+                };
+                if (isEnum && enumValues) {
+                    property.enum = enumValues;
+                }
+                if (isRelationship) {
+                    property.relationship = {
+                        edgeType: edgeType,
+                        description: propDesc
+                    };
+                }
+                properties[propName] = property;
+            });
+            const nameProp = document.querySelector('#property-name-property');
+            if (nameProp) {
+                const propName = nameProp.querySelector('.property-name').value;
+                const propDesc = nameProp.querySelector('.property-description').value;
+                const propType = nameProp.querySelector('.property-type').value;
+                const required = nameProp.querySelector('.property-required').checked;
+                properties[propName] = {
+                    type: propType,
+                    description: propDesc,
+                    required: required
                 };
             }
-
-            properties[propName] = property;
-        });
-
-        // Handle the Name Property
-        const nameProp = document.querySelector('#property-name-property');
-        if (nameProp) {
-            const propName = nameProp.querySelector('.property-name').value; // Should be 'name'
-            const propDesc = nameProp.querySelector('.property-description').value;
-            const propType = nameProp.querySelector('.property-type').value;
-            const required = nameProp.querySelector('.property-required').checked;
-
-            properties[propName] = {
-                type: propType,
-                description: propDesc,
-                required: required
+            const schema = {
+                name: `add_${name}`,
+                description: description,
+                properties: properties,
+                additionalProperties: allowAdditionalProps
             };
+            editor.setValue(JSON.stringify(schema, null, 2));
+            ui.switchTab('viewRaw');
         }
+    };
 
-        const schema = {
-            name: `add_${name}`,
-            description: description,
-            properties: properties,
-            additionalProperties: allowAdditionalProps
-        };
-
-        editor.setValue(JSON.stringify(schema, null, 2));
-        document.querySelector('[data-tab="viewRaw"]').click();
-    }
-
-    function editSchema() {
-        const select = document.getElementById('loadSchemaSelect');
-        const selectedFile = select.value;
-        if (!selectedFile) {
-            showToast('Please select a schema to edit.', 'error');
-            return;
+    const schemaValidator = {
+        isSchemaNameUnique: async (schemaName) => {
+            if (!dirHandle) return true;
+            const fullSchemaName = `add_${schemaName}.schema.json`;
+            const simplifiedSchemaName = `${schemaName}.schema.json`
+            try {
+                for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'file' && (entry.name === fullSchemaName || entry.name === simplifiedSchemaName)) {
+                        return false;
+                    }
+                }
+                return true; // No matching file found
+            } catch (error) {
+                console.error('Error checking for schema name uniqueness:', error);
+                return false; // Assume not unique in case of error
+            }
         }
-        loadSchemaIntoCreateTab(selectedFile);
-    }
+    };
 
-    async function loadSchemaIntoCreateTab(filename) {
-        try {
-            const fileHandle = await dirHandle.getFileHandle(filename);
-            const file = await fileHandle.getFile();
-            const content = await file.text();
-            const schema = JSON.parse(content);
-
-            // Populate schemaName and schemaDescription
-            document.getElementById('schemaName').value = schema.name.replace(/^add_/, '');
-            document.getElementById('schemaDescription').value = schema.description;
-
-            // Clear existing properties except the Name Property
+    // --- UI Management ---
+    const ui = {
+        switchTab: (tabName) => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(`${tabName}Schema`).classList.add('active');
+        },
+        loadSchemas: async () => {
+            if (!dirHandle) return;
+            const select = document.getElementById('loadSchemaSelect');
+            select.innerHTML = '<option value="">Select a schema to load...</option>';
+            try {
+                for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'file' && entry.name.endsWith('.schema.json')) {
+                        const option = document.createElement('option');
+                        option.value = entry.name;
+                        option.textContent = entry.name;
+                        select.appendChild(option);
+                    }
+                }
+            } catch (error) {
+                showToast('Error loading schemas: ' + error.message, 'error');
+            }
+        },
+        resetForm: () => {
+            if (!confirm('Are you sure you want to reset the form? All unsaved changes will be lost.')) return;
+            document.getElementById('schemaName').value = '';
+            document.getElementById('schemaDescription').value = '';
+            document.getElementById('allowAdditionalProps').checked = true;
             const propertiesContainer = document.getElementById('propertiesContainer');
-            propertiesContainer.innerHTML = createNamePropertyTemplate();
+            propertiesContainer.innerHTML = '';
+            propertiesContainer.appendChild(ui.createNamePropertyElement());
+            ui.addProperty();
+            showToast('Form has been reset to default state.', 'success');
+        },
+        addProperty: () => {
+            const container = document.getElementById('propertiesContainer');
+            const newProperty = ui.createPropertyElement();
+            container.appendChild(newProperty);
+        },
+        removeProperty: (button) => {
+            const property = button.closest('.property');
+            property.remove();
+        },
+        toggleEnumFields: (checkbox) => {
+            const property = checkbox.closest('.property');
+            const enumInput = property.querySelector('.enum-values-input');
+            enumInput.style.display = checkbox.checked ? 'block' : 'none';
+        },
+        toggleRelationshipFields: (checkbox) => {
+            const property = checkbox.closest('.property');
+            const relationshipInput = property.querySelector('.edge-type');
+            relationshipInput.style.display = checkbox.checked ? 'block' : 'none';
+        },
+        createPropertyElement: () => {
+            const propertyTemplate = `
+                <div class="property">
+                    <div class="property-header">
+                        <h3>Property</h3>
+                        <button class="btn btn-danger" onclick="ui.removeProperty(this)">Remove</button>
+                    </div>
+                    <div class="property-row large">
+                        <div class="form-group">
+                            <label>Name:</label>
+                            <input type="text" class="property-name" placeholder="Property" oninput="schemaValidator.validatePropertyName(this)">
+                            <div class="validation-message"></div>
+                        </div>
+                        <div class="form-group description-input">
+                            <label>Description:</label>
+                            <input type="text" class="property-description" placeholder="Property description">
+                        </div>
+                        <div class="form-group">
+                            <label>Type:</label>
+                            <select class="property-type" onchange="ui.handlePropertyTypeChange(this)">
+                                <option value="string">String</option>
+                                <option value="array">Array</option>
+                            </select>
+                        </div>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="property-required">
+                                Required
+                            </label>
+                        </div>
+                    </div>
+                    <div class="property-row small">
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="property-enum" onchange="ui.toggleEnumFields(this)">
+                                Is Enum
+                            </label>
+                            <input type="text" class="enum-values-input conditional-input" placeholder="e.g., active, inactive, pending" style="display: none;">
+                        </div>
+                    </div>
+                    <div class="property-row small">
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="property-relationship" onchange="ui.toggleRelationshipFields(this)">
+                                Is Relationship
+                            </label>
+                            <input type="text" class="edge-type conditional-input" placeholder="e.g., owns, belongs_to" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+            `;
+            const template = document.createElement('template');
+            template.innerHTML = propertyTemplate.trim();
+            return template.content.firstChild;
+        },
+        createNamePropertyElement: () => {
+            const namePropertyTemplate = `
+                <div class="property" id="property-name-property">
+                    <div class="property-header">
+                        <h3>Name Property</h3>
+                    </div>
+                    <div class="property-row large">
+                        <div class="form-group">
+                            <label>Name:</label>
+                            <input type="text" class="property-name" value="name" disabled>
+                        </div>
+                        <div class="form-group description-input">
+                            <label>Description:</label>
+                            <input type="text" class="property-description" placeholder="Property description">
+                        </div>
+                        <div class="form-group">
+                            <label>Type:</label>
+                            <select class="property-type" disabled>
+                                <option value="string" selected>String</option>
+                            </select>
+                        </div>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="property-required" checked disabled>
+                                Required
+                            </label>
+                        </div>
+                    </div>
+                    <div class="property-row small">
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="property-enum" disabled>
+                                Is Enum
+                            </label>
+                            <input type="text" class="enum-values-input conditional-input" placeholder="e.g., active, inactive, pending" style="display: none;" disabled>
+                        </div>
+                    </div>
+                    <div class="property-row small">
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="property-relationship" disabled>
+                                Is Relationship
+                            </label>
+                            <input type="text" class="edge-type conditional-input" placeholder="e.g., owns, belongs_to" style="display: none;" disabled>
+                        </div>
+                    </div>
+                </div>
+            `;
+            const template = document.createElement('template');
+            template.innerHTML = namePropertyTemplate.trim();
+            return template.content.firstChild;
+        },
+        handlePropertyTypeChange: (select) => {
+            // No change here
+        },
+        loadSchemaIntoCreateTab: async (filename) => {
+            try {
+                const fileHandle = await dirHandle.getFileHandle(filename);
+                const file = await fileHandle.getFile();
+                const content = await file.text();
+                const schema = JSON.parse(content);
 
-            // Populate the Description of the Name Property
-            const namePropertyDescriptionInput = document.querySelector('#property-name-property .property-description');
-            if (namePropertyDescriptionInput) {
-                namePropertyDescriptionInput.value = schema.properties.name.description;
+                // Check for parsing errors
+                if (typeof schema !== 'object' || schema === null) {
+                    throw new Error('Invalid schema format. The schema should be a JSON object.');
+                }
+
+                // Populate schemaName and schemaDescription
+                document.getElementById('schemaName').value = schema.name.replace(/^add_/, '') || '';
+                document.getElementById('schemaDescription').value = schema.description || '';
+
+                // Clear existing properties except the Name Property
+                const propertiesContainer = document.getElementById('propertiesContainer');
+                propertiesContainer.innerHTML = '';
+                propertiesContainer.appendChild(ui.createNamePropertyElement());
+
+                // Populate the Description of the Name Property
+                const namePropertyDescriptionInput = document.querySelector('#property-name-property .property-description');
+                if (namePropertyDescriptionInput && schema.properties && schema.properties.name) {
+                    namePropertyDescriptionInput.value = schema.properties.name.description || '';
+                }
+
+                // Add properties from schema
+                if (schema.properties) {
+                    for (const [propName, propDetails] of Object.entries(schema.properties)) {
+                        if (propName === 'name') continue; // Skip the Name Property
+                        const propertyElement = ui.generatePropertyHTML(propName, propDetails);
+                        propertiesContainer.appendChild(propertyElement);
+                    }
+                }
+
+                // Switch to the Create Schema tab
+                ui.switchTab('create');
+
+                showToast('Schema loaded into Create Schema tab for editing.', 'success');
+            } catch (error) {
+                showToast('Error editing schema: ' + error.message, 'error');
+            }
+        },
+        generatePropertyHTML: (propName, propDetails) => {
+            const propertyElement = ui.createPropertyElement();
+
+            // Set values for the dynamically created property
+            const nameInput = propertyElement.querySelector('.property-name');
+            const descriptionInput = propertyElement.querySelector('.property-description');
+            const typeSelect = propertyElement.querySelector('.property-type');
+            const requiredCheckbox = propertyElement.querySelector('.property-required');
+            const enumCheckbox = propertyElement.querySelector('.property-enum');
+            const enumInput = propertyElement.querySelector('.enum-values-input');
+            const relationshipCheckbox = propertyElement.querySelector('.property-relationship');
+            const edgeTypeInput = propertyElement.querySelector('.edge-type');
+
+            nameInput.value = propName;
+            descriptionInput.value = propDetails.description || '';
+            typeSelect.value = propDetails.type || 'string';
+            requiredCheckbox.checked = propDetails.required || false;
+
+            if (propDetails.enum && Array.isArray(propDetails.enum)) {
+                enumCheckbox.checked = true;
+                enumInput.value = propDetails.enum.join(', ');
+                enumInput.style.display = 'block';
             }
 
-            // Add properties from schema
-            for (const [propName, propDetails] of Object.entries(schema.properties)) {
-                if (propName === 'name') continue; // Skip the Name Property
-                propertiesContainer.insertAdjacentHTML('beforeend', generatePropertyHTML(propName, propDetails));
+            if (propDetails.relationship && propDetails.relationship.edgeType) {
+                relationshipCheckbox.checked = true;
+                edgeTypeInput.value = propDetails.relationship.edgeType;
+                edgeTypeInput.style.display = 'block';
             }
 
-            // Switch to the Create Schema tab
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelector('.tab[data-tab="create"]').classList.add('active');
-            document.getElementById('createSchema').classList.add('active');
-
-            showToast('Schema loaded into Create Schema tab for editing.', 'success');
-        } catch (error) {
-            showToast('Error editing schema: ' + error.message, 'error');
+            return propertyElement;
+        },
+        editSchema: () => {
+            const select = document.getElementById('loadSchemaSelect');
+            const selectedFile = select.value;
+            if (!selectedFile) {
+                showToast('Please select a schema to edit.', 'error');
+                return;
+            }
+            ui.loadSchemaIntoCreateTab(selectedFile);
         }
-    }
+    };
 
-    function generatePropertyHTML(propName, propDetails) {
-        let enumSection = '';
-        if (propDetails.enum && Array.isArray(propDetails.enum)) {
-            enumSection = `
-                <input type="text" class="enum-values-input conditional-input" value="${propDetails.enum.join(', ')}" placeholder="e.g., active, inactive, pending" style="display: block;">
-            `;
-        } else {
-            enumSection = `
-                <input type="text" class="enum-values-input conditional-input" placeholder="e.g., active, inactive, pending" style="display: none;">
-            `;
-        }
+    // --- Event Handlers ---
+    function setupEventListeners() {
+        document.getElementById('selectDirectoryBtn').addEventListener('click', fileSystem.selectDirectory);
+        document.getElementById('addPropertyBtn').addEventListener('click', ui.addProperty);
+        document.getElementById('viewRawSchemaBtn').addEventListener('click', schemaGenerator.generateSchema);
+        document.getElementById('resetFormBtn').addEventListener('click', ui.resetForm);
+        document.getElementById('saveSchemaBtn').addEventListener('click', fileSystem.saveSchema);
+        document.getElementById('deleteSchemaBtn').addEventListener('click', fileSystem.deleteSchema);
+        document.getElementById('editSchemaBtn').addEventListener('click', ui.editSchema);
+        document.getElementById('schemaName').addEventListener('input', async (event) => {
+            const schemaName = event.target.value;
+            const isUnique = await schemaValidator.isSchemaNameUnique(schemaName);
 
-        let relationshipSection = '';
-        if (propDetails.relationship && propDetails.relationship.edgeType) {
-            relationshipSection = `
-                <input type="text" class="edge-type conditional-input" value="${propDetails.relationship.edgeType}" placeholder="e.g., owns, belongs_to" style="display: block;">
-            `;
-        } else {
-            relationshipSection = `
-                <input type="text" class="edge-type conditional-input" placeholder="e.g., owns, belongs_to" style="display: none;">
-            `;
-        }
-
-        const isEnum = propDetails.enum && Array.isArray(propDetails.enum);
-        const isRelationship = propDetails.relationship && propDetails.relationship.edgeType;
-
-        return `
-            <div class="property">
-                <div class="property-header">
-                    <h3>Property</h3>
-                    <button class="btn btn-danger" onclick="removeProperty(this)">Remove</button>
-                </div>
-                <div class="property-row large">
-                    <div class="form-group">
-                        <label>Name:</label>
-                        <input type="text" class="property-name" value="${propName}" placeholder="Property name">
-                    </div>
-                    <div class="form-group description-input">
-                        <label>Description:</label>
-                        <input type="text" class="property-description" value="${propDetails.description}" placeholder="Property description">
-                    </div>
-                    <div class="form-group">
-                        <label>Type:</label>
-                        <select class="property-type" onchange="handlePropertyTypeChange(this)">
-                            <option value="string" ${propDetails.type === 'string' ? 'selected' : ''}>String</option>
-                            <option value="array" ${propDetails.type === 'array' ? 'selected' : ''}>Array</option>
-                        </select>
-                    </div>
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" class="property-required" ${propDetails.required ? 'checked' : ''}>
-                            Required
-                        </label>
-                    </div>
-                </div>
-                <div class="property-row small">
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" class="property-enum" onchange="toggleEnumFields(this)" ${isEnum ? 'checked' : ''}>
-                            Is Enum
-                        </label>
-                        ${enumSection}
-                    </div>
-                </div>
-                <div class="property-row small">
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" class="property-relationship" onchange="toggleRelationshipFields(this)" ${isRelationship ? 'checked' : ''}>
-                            Is Relationship
-                        </label>
-                        ${relationshipSection}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    // Tab switching
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            tab.classList.add('active');
-            document.getElementById(tab.dataset.tab + 'Schema').classList.add('active');
+            if (!isUnique) {
+                showToast('Schema name must be unique', 'error');
+            }
         });
-    });
 
-    // Schema loading
-    document.getElementById('loadSchemaSelect').addEventListener('change', (e) => {
-        if (e.target.value) {
-            loadSchemaFile(e.target.value);
-        }
-    });
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => ui.switchTab(tab.dataset.tab));
+        });
 
-    // Initialize the application
+        document.getElementById('loadSchemaSelect').addEventListener('change', (e) => {
+            if (e.target.value) {
+                fileSystem.loadSchemaFile(e.target.value);
+            }
+        });
+    }
+
+    // --- Initialization ---
     async function initialize() {
         try {
-            await initDB();
+            await idb.initDB();
         } catch (error) {
             showToast('Error initializing database: ' + error.message, 'error');
             return;
         }
 
-        // Check for File System Access API support
         if (!('showDirectoryPicker' in window)) {
             showToast('Your browser does not support the File System Access API. Please use a modern browser like Chrome or Edge.', 'error', 0);
             return;
         }
 
-        // Attempt to retrieve the stored directory handle
         try {
-            const storedHandle = await getDirectoryHandleFromDB();
+            const storedHandle = await idb.getDirectoryHandleFromDB();
             if (storedHandle) {
-                // Verify permissions
-                const permission = await storedHandle.queryPermission({ mode: 'readwrite' });
+                const permission = await storedHandle.queryPermission({mode: 'readwrite'});
                 if (permission === 'granted') {
                     dirHandle = storedHandle;
                     document.getElementById('folderPath').textContent = dirHandle.name;
-                    await loadSchemas();
+                    await ui.loadSchemas();
                     showToast('Loaded previously selected folder.', 'success');
                 } else {
-                    // Request permission
-                    const requestPermission = await storedHandle.requestPermission({ mode: 'readwrite' });
+                    const requestPermission = await storedHandle.requestPermission({mode: 'readwrite'});
                     if (requestPermission === 'granted') {
                         dirHandle = storedHandle;
                         document.getElementById('folderPath').textContent = dirHandle.name;
-                        await loadSchemas();
+                        await ui.loadSchemas();
                         showToast('Loaded previously selected folder.', 'success');
                     } else {
-                        // Permission denied, remove handle from DB
-                        await removeDirectoryHandleFromDB();
+                        await idb.removeDirectoryHandleFromDB();
                         showToast('Permission to access the previously selected folder was denied.', 'error');
                     }
                 }
@@ -1091,38 +1034,14 @@
             showToast('Error accessing stored folder: ' + error.message, 'error');
         }
 
-        // Add name property with fixed name
         const container = document.getElementById('propertiesContainer');
-        container.innerHTML = createNamePropertyTemplate();
-
-        // Add one empty property
-        addProperty();
+        container.innerHTML = '';
+        container.appendChild(ui.createNamePropertyElement());
+        ui.addProperty();
+        setupEventListeners();
     }
 
-    // Reset Form Functionality
-    function resetForm() {
-        if (!confirm('Are you sure you want to reset the form? All unsaved changes will be lost.')) {
-            return;
-        }
-
-        // Clear Schema Name and Description
-        document.getElementById('schemaName').value = '';
-        document.getElementById('schemaDescription').value = '';
-
-        // Reset Allow Additional Properties to checked
-        document.getElementById('allowAdditionalProps').checked = true;
-
-        // Reset Properties Container
-        const propertiesContainer = document.getElementById('propertiesContainer');
-        propertiesContainer.innerHTML = createNamePropertyTemplate();
-
-        // Add one empty property
-        addProperty();
-
-        showToast('Form has been reset to default state.', 'success');
-    }
-
-    // Start the application
+    // --- Start the application ---
     initialize();
 </script>
 </body>
