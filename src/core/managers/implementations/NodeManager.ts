@@ -2,6 +2,7 @@
 
 import {INodeManager} from '../interfaces/INodeManager.js';
 import type {Node} from '../../../types/graph.js';
+import {ValidationUtils} from '../../utils/ValidationUtils.js';
 
 /**
  * Implements node-related operations for the knowledge graph.
@@ -19,14 +20,8 @@ export class NodeManager extends INodeManager {
             const newNodes: Node[] = [];
 
             for (const node of nodes) {
-                if (!node.name || !node.nodeType) {
-                    throw new Error("Node must have a 'name' and 'nodeType'");
-                }
-
-                if (graph.nodes.some(existing => existing.name === node.name)) {
-                    throw new Error(`Node already exists: ${node.name}. Consider updating existing node.`);
-                }
-
+                ValidationUtils.validateNodeProperties(node);
+                ValidationUtils.validateNodeDoesNotExist(graph, node.name);
                 newNodes.push(node);
             }
 
@@ -52,11 +47,9 @@ export class NodeManager extends INodeManager {
             const updatedNodes: Node[] = [];
 
             for (const updateNode of nodes) {
-                if (!updateNode.name) {
-                    throw new Error("Node must have a 'name' for updating");
-                }
-
+                ValidationUtils.validateNodeNameProperty(updateNode);
                 const nodeIndex = graph.nodes.findIndex(n => n.name === updateNode.name);
+
                 if (nodeIndex === -1) {
                     throw new Error(`Node not found: ${updateNode.name}`);
                 }
@@ -83,10 +76,7 @@ export class NodeManager extends INodeManager {
      */
     async deleteNodes(nodeNames: string[]): Promise<void> {
         try {
-            if (!Array.isArray(nodeNames)) {
-                throw new Error("nodeNames must be an array");
-            }
-
+            ValidationUtils.validateNodeNamesArray(nodeNames);
             this.emit('beforeDeleteNodes', {nodeNames});
 
             const graph = await this.storage.loadGraph();
