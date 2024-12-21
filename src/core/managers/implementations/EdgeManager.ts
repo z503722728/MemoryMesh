@@ -3,6 +3,7 @@
 import {IEdgeManager} from '../interfaces/IEdgeManager.js';
 import type {Edge} from '../../../types/graph.js';
 import type {EdgeUpdate, EdgeFilter} from '../../../types/index.js';
+import {ValidationUtils} from '../../utils/ValidationUtils.js';
 
 /**
  * Implements edge-related operations for the knowledge graph.
@@ -17,22 +18,20 @@ export class EdgeManager extends IEdgeManager {
             this.emit('beforeAddEdges', {edges});
 
             const graph = await this.storage.loadGraph();
-            const newEdges = edges.filter(edge =>
-                !graph.edges.some(existing =>
-                    existing.from === edge.from &&
-                    existing.to === edge.to &&
-                    existing.edgeType === edge.edgeType
-                )
-            );
+
+            // Validate edge uniqueness and node existence using ValidationUtils
+            const newEdges = edges.filter(edge => {
+                ValidationUtils.validateEdgeUniqueness(graph, edge);
+                return true;
+            });
 
             if (newEdges.length === 0) {
                 return [];
             }
 
-            // Verify that nodes exist
-            const nodeNames = new Set(graph.nodes.map(node => node.name));
             for (const edge of newEdges) {
-                this.validateEdgeNodes(edge, nodeNames);
+                ValidationUtils.validateNodeExists(graph, edge.from);
+                ValidationUtils.validateNodeExists(graph, edge.to);
             }
 
             graph.edges.push(...newEdges);
@@ -67,13 +66,12 @@ export class EdgeManager extends IEdgeManager {
                     throw new Error(`Edge not found: ${updateEdge.from} -> ${updateEdge.to} (${updateEdge.edgeType})`);
                 }
 
-                // Verify that nodes exist for any updated node references
-                const nodeNames = new Set(graph.nodes.map(node => node.name));
-                if (updateEdge.newFrom && !nodeNames.has(updateEdge.newFrom)) {
-                    throw new Error(`New source node not found: ${updateEdge.newFrom}`);
+                // Validate node existence for updated nodes using ValidationUtils
+                if (updateEdge.newFrom) {
+                    ValidationUtils.validateNodeExists(graph, updateEdge.newFrom);
                 }
-                if (updateEdge.newTo && !nodeNames.has(updateEdge.newTo)) {
-                    throw new Error(`New target node not found: ${updateEdge.newTo}`);
+                if (updateEdge.newTo) {
+                    ValidationUtils.validateNodeExists(graph, updateEdge.newTo);
                 }
 
                 const updatedEdge: Edge = {
@@ -145,18 +143,6 @@ export class EdgeManager extends IEdgeManager {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
             throw new Error(errorMessage);
-        }
-    }
-
-    /**
-     * Validates that an edge's referenced nodes exist in the graph.
-     */
-    private validateEdgeNodes(edge: Edge, nodeNames: Set<string>): void {
-        if (!nodeNames.has(edge.from)) {
-            throw new Error(`Source node not found: ${edge.from}`);
-        }
-        if (!nodeNames.has(edge.to)) {
-            throw new Error(`Target node not found: ${edge.to}`);
         }
     }
 }

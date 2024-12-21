@@ -3,6 +3,7 @@
 import {IMetadataManager} from '../interfaces/IMetadataManager.js';
 import type {Metadata} from '../../../types/graph.js';
 import type {MetadataAddition, MetadataResult, MetadataDeletion} from '../../../types/index.js';
+import {ValidationUtils} from '../../utils/ValidationUtils.js';
 
 /**
  * Implements metadata-related operations for the knowledge graph.
@@ -20,20 +21,18 @@ export class MetadataManager extends IMetadataManager {
             const results: MetadataResult[] = [];
 
             for (const item of metadata) {
+                ValidationUtils.validateNodeExists(graph, item.nodeName);
                 const node = graph.nodes.find(e => e.name === item.nodeName);
-                if (!node) {
-                    throw new Error(`Node not found: ${item.nodeName}`);
-                }
 
-                if (!Array.isArray(node.metadata)) {
-                    node.metadata = [];
+                if (!Array.isArray(node!.metadata)) {
+                    node!.metadata = [];
                 }
 
                 const newMetadata = item.contents.filter(content =>
-                    !node.metadata.includes(content)
+                    !node!.metadata.includes(content)
                 );
 
-                node.metadata.push(...newMetadata);
+                node!.metadata.push(...newMetadata);
                 results.push({
                     nodeName: item.nodeName,
                     addedMetadata: newMetadata
@@ -61,7 +60,9 @@ export class MetadataManager extends IMetadataManager {
             let deletedCount = 0;
 
             for (const deletion of deletions) {
+                ValidationUtils.validateNodeExists(graph, deletion.nodeName);
                 const node = graph.nodes.find(e => e.name === deletion.nodeName);
+
                 if (node) {
                     const initialMetadataCount = node.metadata.length;
                     node.metadata = node.metadata.filter(o =>
@@ -86,13 +87,10 @@ export class MetadataManager extends IMetadataManager {
     async getMetadata(nodeName: string): Promise<Metadata> {
         try {
             const graph = await this.storage.loadGraph();
+            ValidationUtils.validateNodeExists(graph, nodeName);
             const node = graph.nodes.find(e => e.name === nodeName);
 
-            if (!node) {
-                throw new Error(`Node not found: ${nodeName}`);
-            }
-
-            return node.metadata || [];
+            return node!.metadata || [];
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
             throw new Error(errorMessage);
