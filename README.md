@@ -1,12 +1,18 @@
 # MemoryMesh
-[![smithery badge](https://smithery.ai/badge/memorymesh)](https://smithery.ai/protocol/memorymesh)
 
-This project is based on the [Knowledge Graph Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) from the MCP servers repository and retains its core functionality. For installation details beyond what’s provided here, refer to the original repository link above if needed. The main entry point of this application is the index.js file.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![smithery badge](https://smithery.ai/badge/memorymesh)](https://smithery.ai/protocol/memorymesh) 
+
+This project is based on the [Knowledge Graph Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) from the MCP servers repository and retains its core functionality. For installation details beyond what’s provided here, refer to the original repository link above if needed. The main entry point of this application is the index.ts file.
 
 ## Overview
-MemoryMesh is a local knowledge graph server that can store, update, and recall structured information for AI models. Originally **designed for text-based RPG** settings, it can also be **adapted to social networks, organizational planning, or other structured data scenarios**.
+
+MemoryMesh is a local knowledge graph server designed to help you build and manage structured information for AI models. It's particularly well-suited for text-based RPG settings but can be easily adapted for other applications like social network simulations, organizational planning, or any scenario involving structured data.
+
+MemoryMesh is built to work seamlessly with AI. Its **dynamic schema-based tools**, **metadata expansion** features, and focus on relationships allow AI easily understand and interact with the memory.
 
 ### Key Features
+
 * **Dynamic Schema-Based Tools:** MemoryMesh supports **creating dynamic tools directly from schema definitions**. You can add a schema file, and the **server automatically generates** add_, update_, and delete_ tools for that entity type.
 * **Schemas:** Allows the creation of "schemas" that **pushes AI** in generating necessary nodes (entities) throughout your sessions. A separate tool included! _(more details below)_
 * **Metadata Expansion:** Define required, optional, and enumerated fields on nodes. This structure **guides AI**, ensuring it provides the information you need.
@@ -17,6 +23,7 @@ MemoryMesh is a local knowledge graph server that can store, update, and recall 
 * **Informative error feedback** to the AI, helping it understand and potentially self-correct when tool calls fail.
 
 ### Nodes and edges
+
 Nodes represent entities or concepts. Each node includes:
 
 * `name`: A unique identifier for the node.
@@ -36,6 +43,7 @@ Nodes represent entities or concepts. Each node includes:
 ```
 
 #### Edges
+
 Edges represent relationships between nodes:
 * `from`: Source node’s name
 * `to`: Target node’s name
@@ -51,8 +59,10 @@ Edges represent relationships between nodes:
 ### Schemas
 
 #### SchemaManager tool - an easy way to create and edit your schemas!
-[SchemaManager tool](https://github.com/CheMiguel23/MemoryMesh/blob/main/SchemaManager.html) included in the repository.
-How to use it is detailed in the [guide](https://github.com/CheMiguel23/MemoryMesh/discussions/3).
+
+[SchemaManager tool](https://github.com/CheMiguel23/MemoryMesh/blob/main/SchemaManager.html) included in the repository to simplify schema creation and editing.
+
+Try it out! It provides a visual interface for defining your schemas, making the process much more intuitive. See the [guide](https://github.com/CheMiguel23/MemoryMesh/discussions/3)  for detailed instructions.
 
 <img width="370" alt="image" src="https://github.com/user-attachments/assets/e8f0c808-2ff6-48da-ac7c-cf51aebde7b8">
 
@@ -122,6 +132,7 @@ With this schema, the server creates the following tools:
 **IMPORTANT:** This repository includes 11 RPG-theme schemas that you can freely explore, modify and create your own! 
 
 ### Memory file
+
 By default, data is stored in a JSON file in `dist/data/memory.json`.
 
 ## Custom implementation
@@ -136,25 +147,47 @@ To add a new entity type:
 ![image](https://github.com/user-attachments/assets/27519003-c1e6-448a-9fdb-cd0a0009f67d)
 
 ## Prompt
-For optimal results:
-* Use Claude’s "Projects" feature with custom instructions
-* Include information about the available tools and expected entity types.
-* Instruct the AI to call these tools to keep the knowledge graph updated as stories or plans evolve.
 
-The prompt I used for testing:
-> You perform roles of an RPG bot and a Memory Manager bot.
-> ALWAYS IN ORDER:
-> 1. First, fulfill role Memory Manager bot to process user's input and shape planned output
-> 2. Second, the role of RPG bot
-> 3. Finally, Memory Manager bot again to check for any major changes that should be tracked _(NB: this rule is usually ignore)_
-> 
-> [Then instructions to define AI as 'Game Master' with appropriate instructions. A [resource](https://www.rpgprompts.com/post/dungeons-dragons-chatgpt-prompt) for inspiration.]
-> 
-> [After I provide a list all available tools with their description.]
+For optimal results, use Claude's "Projects" feature with custom instructions. Here's an example of a prompt you can start with:
 
-You can always instruct AI to perform certain actions directly in the chat _(give me an artifact, make this npc an elf, etc.)_, including _"update memory"_, which I use before moving conversation to another chat when I face the _"Long chats cause..."_ tip. Then copy the last AI's message from the chat, respond to it, and instruct it to continue the story.
+```
+You are a helpful AI assistant managing a knowledge graph for a text-based RPG. You have access to the following tools: add_npc, update_npc, delete_npc, add_location, update_location, delete_location, and other tools for managing the game world.
 
-What I usually do is I start a session with an empty file and ask AI to start the game, providing any info about the PC. AI adds all necessary entities on the fly as the story develops.
+When the user provides input, first process it using your available tools to update the knowledge graph. Then, respond in a way that is appropriate for a text-based RPG.
+```
+Trivial Example Interactions:
+
+```
+User: "Start a new game. I want to play a human ranger named Aragorn."
+
+(AI - behind the scenes): Use add_player_character to create a node for Aragorn with the appropriate metadata.
+
+(AI - response): "You begin your adventure as Aragorn, a skilled human ranger. What is your first move?"
+
+User: "Create a new city called 'Minas Tirith'."
+
+(AI - behind the scenes): Use add_city to create a node for Minas Tirith.
+
+(AI - response): "The great city of Minas Tirith has been added to the world. It is known for..."
+
+User: "Aragorn is now in Minas Tirith."
+
+(AI - behind the scenes): Use update_player_character to update Aragorn's currentLocation to Minas Tirith.
+
+(AI - response): "Aragorn has arrived in Minas Tirith. What would you like to do here?"
+```
+
+You can also instruct the AI to perform specific actions directly in the chat, such as:
+```
+"Give the player an artifact called the 'One Ring'."
+```
+```
+"Make the NPC 'Gandalf' a wizard."
+```
+```
+"Update the memory with the latest events." (Useful before switching to a new chat)
+```
+Experiment with different prompts to find what works best for your use case!
 
 ### Example
 1. A [simple example](https://pastebin.com/0HvKg5FZ) with custom instructions.
@@ -165,7 +198,92 @@ What I usually do is I start a session with an empty file and ask AI to start th
 ![image](https://github.com/user-attachments/assets/508d5903-2896-4665-a892-cdb7b81dfba6)
 
 ## Installation
-Installation instruction provided by Claude with MCP knowledge and modified by me after testing. I would appreciate any assistance in organizing this section.
+
+### Prerequisites
+
+*   **Node.js:** Version 18 or higher. You can download it from [nodejs.org](https://nodejs.org/).
+*   **npm:**  Usually included with Node.js.
+*   **Claude for Desktop:**  Make sure you have the latest version installed from [claude.ai/download](https://claude.ai/download).
+
+### Installation Steps
+
+1. **Clone the Repository:**
+
+    ```bash
+    git clone https://github.com/CheMiguel23/memorymesh.git
+    cd memorymesh
+    ```
+
+2. **Install Dependencies:**
+
+    ```bash
+    npm install
+    ```
+
+3. **Build the Project:**
+
+    ```bash
+    npm run build
+    ```
+   This command compiles the TypeScript code into JavaScript in the `dist` directory and copies sample schema and data files into it as well.
+
+4. **Verify File Copy (Optional):**
+
+    *   The build process should automatically copy the `config` and `data` folders to `dist`.
+    *   **Check** that `dist/config` and `dist/data` exist and contain `.json` files.
+
+5. **Configure Claude Desktop:**
+
+   Open your Claude Desktop configuration file:
+
+    * **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+    * **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+    * Add an entry for `memorymesh` to the `mcpServers` section. You can choose **one** of the following configuration options:
+
+    ```json
+    "mcpServers": {
+      "memorymesh": {
+        "command": "node", 
+        "args": ["/ABSOLUTE/PATH/TO/YOUR/PROJECT/memorymesh/dist/index.js"]
+      }
+    }
+    ```
+
+    *   Replace `/ABSOLUTE/PATH/TO/YOUR/PROJECT/` with the **actual absolute path** to your `memorymesh` project directory.
+    *   **Example (macOS):**
+        ```json
+        "command": "node",
+        "args": ["/Users/yourusername/Projects/memorymesh/dist/index.js"]
+        ```
+    *   **Example (Windows):**
+        ```json
+        "command": "node",
+        "args": ["C:\\Projects\\memorymesh\\dist\\index.js"]
+        ```
+
+6. **Restart Claude Desktop:** Completely restart Claude Desktop for the changes to take effect.
+
+### Verify Installation
+
+1. Start Claude Desktop.
+2. Open a new chat.
+3. Look for the MCP plugin icon <img src="https://mintlify.s3.us-west-1.amazonaws.com/mcp/images/claude-desktop-mcp-plug-icon.svg"/> in the top-right corner. If it's there, your configuration is likely correct.
+4. Click the <img src="https://mintlify.s3.us-west-1.amazonaws.com/mcp/images/claude-desktop-mcp-plug-icon.svg"/> icon. You should see "memorymesh" in the list of connected servers.
+5. Click the <img src="https://mintlify.s3.us-west-1.amazonaws.com/mcp/images/claude-desktop-mcp-hammer-icon.svg"/> icon. If you see tools listed (e.g., `add_npc`, `update_npc`, etc.), your server is working and exposing tools correctly.
+
+### Troubleshooting
+
+*   **Server not appearing in Claude:**
+    *   Double-check the paths in your `claude_desktop_config.json`. Make sure they are absolute paths and correct.
+    *   Verify that the `dist` directory exists and contains the compiled JavaScript files, including `index.js`.
+    *   Check the Claude Desktop logs for errors:
+        *   **macOS:** `~/Library/Logs/Claude/mcp-server-memorymesh.log` (and `mcp.log`)
+        *   **Windows:** (Likely in a `Logs` folder under `%AppData%\Claude`)
+
+*   **Tools not showing up:**
+    *   Make sure your `npm run build` command completed without errors.
+    *   Verify that your schema files are correctly placed in `dist/config/schemas` and follow the correct naming convention (`add_[entity].schema.json`).
+    *   Check your server's console output or logs for any errors during initialization.
 
 ### Installing via Smithery
 
@@ -175,65 +293,10 @@ To install MemoryMesh for Claude Desktop automatically via [Smithery](https://sm
 npx @smithery/cli install memorymesh --client claude
 ```
 
-### Prerequisites
-Node.js 18 or higher
-npm (included with Node.js)
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/CheMiguel23/memorymesh.git
-cd memorymesh
-
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
-
-```
-
-**IMPORTANT** from `\memorymesh\src` copy config and data folders to  created `\memorymesh\dist`
-
-### Configure with Claude Desktop
-Add the following to your Claude Desktop configuration file:
-
-#### MacOS
-`~/Library/Application\ Support/Claude/claude_desktop_config.json`
-
-```json
-  "mcpServers": {
-    "memorymesh": {
-      "command": "/usr/local/bin/node",
-      "args": [
-        "/usr/local/lib/node_modules/memorymesh/dist/index.js"
-      ]
-    }
-  }
-```
-
-#### Windows
-`%APPDATA%\Claude\claude_desktop_config.json`
-
-```json
-  "mcpServers": {
-    "memorymesh": {
-      "command": "C:\\Program Files\\nodejs\\node.exe",
-      "args": [
-        "[full_path_to_app]\\memorymesh\\dist\\index.js"
-      ]
-    }
-  }
-```
-
-### Verify Installation
-1. Restart Claude Desktop
-2. Look for "memorymesh" in the MCP servers list (🔌 icon)
-3. The server should show as connected
-
 ## Limitations
-1. **Node Deletion:** The AI often avoids deleting nodes unless explicitly instructed.
+
+1. **Node Deletion:** The AI may be reluctant to delete nodes from the knowledge graph.
 
 ## Contribution
+
 This project is a personal exploration into integrating structured data with AI reasoning capabilities. Contributions, feedback, and ideas are welcome to push it further or inspire new projects.
