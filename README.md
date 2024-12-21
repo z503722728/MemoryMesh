@@ -3,7 +3,18 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![smithery badge](https://smithery.ai/badge/memorymesh)](https://smithery.ai/protocol/memorymesh) 
 
-This project is based on the [Knowledge Graph Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) from the MCP servers repository and retains its core functionality. For installation details beyond what’s provided here, refer to the original repository link above if needed. The main entry point of this application is the index.ts file.
+A knowledge graph server designed for AI models, with a focus on text-based RPGs and interactive storytelling. Built to help AI maintain consistent, structured memory across conversations.
+
+*The project is based on the [Knowledge Graph Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) from the MCP servers repository and retains its core functionality.*
+
+## Why MemoryMesh?
+
+- **AI-First Design**: Tools and schemas specifically crafted for AI interaction
+- **Dynamic & Flexible**: Automatically generates tools from your schema definitions
+- **RPG-Ready**: Comes with 11 pre-built schemas for gaming scenarios
+- **Visual Tools**: Includes a Schema Manager for easy configuration
+
+[Quick Start](#installation) | [Docs](#overview) | [Examples](#example) | [Schema Guide](https://github.com/CheMiguel23/MemoryMesh/discussions/3)
 
 ## Overview
 
