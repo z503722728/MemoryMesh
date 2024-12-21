@@ -130,7 +130,8 @@ export class EdgeManager extends IEdgeManager {
     async getEdges(filter?: EdgeFilter): Promise<Edge[]> {
         try {
             const graph = await this.storage.loadGraph();
-            if (!filter) {
+
+            if (!filter || Object.keys(filter).length === 0) {
                 return graph.edges;
             }
 
@@ -138,7 +139,6 @@ export class EdgeManager extends IEdgeManager {
                 if (filter.from && edge.from !== filter.from) return false;
                 if (filter.to && edge.to !== filter.to) return false;
                 return !(filter.edgeType && edge.edgeType !== filter.edgeType);
-
             });
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
