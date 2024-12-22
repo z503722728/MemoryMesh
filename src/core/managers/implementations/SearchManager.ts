@@ -69,4 +69,8 @@ export class SearchManager extends ISearchManager {
             throw new Error(errorMessage);
         }
     }
+
+    async readGraph(): Promise<Graph> {
+        return await this.storage.loadGraph();
+    }
 }

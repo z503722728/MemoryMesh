@@ -172,6 +172,8 @@ export interface ISearchManager extends IManager {
     searchNodes(query: string): Promise<Graph>;
 
     openNodes(names: string[]): Promise<Graph>;
+
+    readGraph(): Promise<Graph>;
 }
 
 /**
