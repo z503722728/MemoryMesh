@@ -146,6 +146,8 @@ With this schema, the server creates the following tools:
 
 By default, data is stored in a JSON file in `dist/data/memory.json`.
 
+A sepate [Memory Viewer](https://github.com/CheMiguel23/MemoryMesh/discussions/15) tool is available.
+
 ## Custom implementation
 
 To add a new entity type:
