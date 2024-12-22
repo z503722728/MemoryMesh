@@ -1,10 +1,6 @@
 // src/core/KnowledgeGraphManager.ts
 
-import {JsonLineStorage} from './storage/JsonLineStorage.js';
-import {ManagerFactory} from './managers/ManagerFactory.js';
-import {GraphOperations} from './operations/index.js';
-import {SearchOperations} from './operations/index.js';
-import {TransactionOperations} from './operations/index.js';
+import type {IStorage} from '../types/storage.js';
 import type {Node, Edge, Graph} from '../types/graph.js';
 import type {
     MetadataAddition,
@@ -14,132 +10,100 @@ import type {
     GetEdgesResult,
     OpenNodesResult
 } from '../types/index.js';
-import type {IStorage} from '../types/storage.js';
+import {GraphManager} from "./GraphManager.js";
+import {SearchManager} from "./SearchManager.js";
+import {TransactionManager} from "./TransactionManager.js";
 
 /**
- * Manages operations related to the knowledge graph by coordinating between
- * specialized operation classes for graph manipulation, search, and transactions.
+ * Main facade that coordinates between specialized managers
  */
 export class KnowledgeGraphManager {
-    private readonly graphOperations: GraphOperations;
-    private readonly searchOperations: SearchOperations;
-    private readonly transactionOperations: TransactionOperations;
+    private readonly graphManager: GraphManager;
+    private readonly searchManager: SearchManager;
+    private readonly transactionManager: TransactionManager;
 
-    /**
-     * Creates an instance of KnowledgeGraphManager.
-     */
-    constructor(storage: IStorage = new JsonLineStorage()) {
-        const nodeManager = ManagerFactory.createNodeManager(storage);
-        const edgeManager = ManagerFactory.createEdgeManager(storage);
-        const metadataManager = ManagerFactory.createMetadataManager(storage);
-        const searchManager = ManagerFactory.createSearchManager(storage);
-        const transactionManager = ManagerFactory.createTransactionManager(storage);
-
-        this.graphOperations = new GraphOperations(nodeManager, edgeManager, metadataManager);
-        this.searchOperations = new SearchOperations(searchManager);
-        this.transactionOperations = new TransactionOperations(transactionManager);
+    constructor(storage?: IStorage) {
+        this.graphManager = new GraphManager(storage);
+        this.searchManager = new SearchManager(storage);
+        this.transactionManager = new TransactionManager(storage);
     }
 
-    /**
-     * Transaction Operations
-     */
-
-    async beginTransaction(): Promise<void> {
-        return this.transactionOperations.beginTransaction();
-    }
-
-    async commit(): Promise<void> {
-        return this.transactionOperations.commit();
-    }
-
-    async rollback(): Promise<void> {
-        return this.transactionOperations.rollback();
-    }
-
-    /**
-     * Executes an operation within a transaction and handles commit/rollback.
-     */
-    async withTransaction<T>(operation: () => Promise<T>): Promise<T> {
-        return this.transactionOperations.withTransaction(operation);
-    }
-
-    /**
-     * Adds a rollback action to the current transaction.
-     */
-    async addRollbackAction(action: () => Promise<void>, description: string): Promise<void> {
-        return this.transactionOperations.addRollbackAction(action, description);
-    }
-
-    isInTransaction(): boolean {
-        return this.transactionOperations.isInTransaction();
-    }
-
-    getCurrentGraph(): Graph {
-        return this.transactionOperations.getCurrentGraph();
-    }
-
-    /**
-     * Graph Operations - Nodes
-     */
-
+    // Graph operations delegated to GraphManager
     async addNodes(nodes: Node[]): Promise<Node[]> {
-        return this.graphOperations.addNodes(nodes);
+        return this.graphManager.addNodes(nodes);
     }
-
 
     async updateNodes(nodes: Partial<Node>[]): Promise<Node[]> {
-        return this.graphOperations.updateNodes(nodes);
+        return this.graphManager.updateNodes(nodes);
     }
 
     async deleteNodes(nodeNames: string[]): Promise<void> {
-        return this.graphOperations.deleteNodes(nodeNames);
+        return this.graphManager.deleteNodes(nodeNames);
     }
 
-    /**
-     * Graph Operations - Edges
-     */
-
     async addEdges(edges: Edge[]): Promise<Edge[]> {
-        return this.graphOperations.addEdges(edges);
+        return this.graphManager.addEdges(edges);
     }
 
     async updateEdges(edges: Edge[]): Promise<Edge[]> {
-        return this.graphOperations.updateEdges(edges);
+        return this.graphManager.updateEdges(edges);
     }
 
     async deleteEdges(edges: Edge[]): Promise<void> {
-        return this.graphOperations.deleteEdges(edges);
+        return this.graphManager.deleteEdges(edges);
     }
 
     async getEdges(filter?: EdgeFilter): Promise<GetEdgesResult> {
-        return this.graphOperations.getEdges(filter);
+        return this.graphManager.getEdges(filter);
     }
 
-    /**
-     * Graph Operations - Metadata
-     */
-
     async addMetadata(metadata: MetadataAddition[]): Promise<MetadataResult[]> {
-        return this.graphOperations.addMetadata(metadata);
+        return this.graphManager.addMetadata(metadata);
     }
 
     async deleteMetadata(deletions: MetadataDeletion[]): Promise<void> {
-        return this.graphOperations.deleteMetadata(deletions);
+        return this.graphManager.deleteMetadata(deletions);
     }
 
-    /**
-     * Search Operations
-     */
-
+    // Search operations delegated to SearchManager
     async readGraph(): Promise<Graph> {
-        return await this.searchOperations.readGraph();
+        return this.searchManager.readGraph();
     }
 
     async searchNodes(query: string): Promise<OpenNodesResult> {
-        return this.searchOperations.searchNodes(query);
+        return this.searchManager.searchNodes(query);
     }
 
     async openNodes(names: string[]): Promise<OpenNodesResult> {
-        return this.searchOperations.openNodes(names);
+        return this.searchManager.openNodes(names);
+    }
+
+    // Transaction operations delegated to TransactionManager
+    async beginTransaction(): Promise<void> {
+        return this.transactionManager.beginTransaction();
+    }
+
+    async commit(): Promise<void> {
+        return this.transactionManager.commit();
+    }
+
+    async rollback(): Promise<void> {
+        return this.transactionManager.rollback();
+    }
+
+    async withTransaction<T>(operation: () => Promise<T>): Promise<T> {
+        return this.transactionManager.withTransaction(operation);
+    }
+
+    async addRollbackAction(action: () => Promise<void>, description: string): Promise<void> {
+        return this.transactionManager.addRollbackAction(action, description);
+    }
+
+    isInTransaction(): boolean {
+        return this.transactionManager.isInTransaction();
+    }
+
+    getCurrentGraph(): Graph {
+        return this.transactionManager.getCurrentGraph();
     }
 }

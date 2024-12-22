@@ -15,9 +15,7 @@ export class JsonLineStorage implements IStorage {
         byTo: Map<string, Set<string>>;
         byType: Map<string, Set<string>>;
     };
-    private edgeCache: Map<string, Edge>;
     private initialized: boolean;
-    private cachedGraph: Graph | null;
 
     constructor() {
         this.edgeIndex = {
@@ -25,9 +23,7 @@ export class JsonLineStorage implements IStorage {
             byTo: new Map(),
             byType: new Map()
         };
-        this.edgeCache = new Map();
         this.initialized = false;
-        this.cachedGraph = null;
     }
 
     /**
@@ -69,14 +65,6 @@ export class JsonLineStorage implements IStorage {
     async loadGraph(): Promise<Graph> {
         await this.ensureStorageExists();
 
-        // Return cached graph if available
-        if (this.cachedGraph) {
-            return {
-                nodes: [...this.cachedGraph.nodes],
-                edges: [...this.cachedGraph.edges]
-            };
-        }
-
         try {
             const MEMORY_FILE_PATH = CONFIG.PATHS.MEMORY_FILE;
             const data = await fs.readFile(MEMORY_FILE_PATH, "utf-8");
@@ -103,18 +91,10 @@ export class JsonLineStorage implements IStorage {
                 }
             }
 
-            // Cache the loaded graph
-            this.cachedGraph = {
-                nodes: [...graph.nodes],
-                edges: [...graph.edges]
-            };
-
             return graph;
         } catch (error) {
             if (error instanceof Error && 'code' in error && error.code === "ENOENT") {
-                const emptyGraph = {nodes: [], edges: []};
-                this.cachedGraph = emptyGraph;
-                return emptyGraph;
+                return {nodes: [], edges: []};
             }
             throw error;
         }
@@ -138,20 +118,19 @@ export class JsonLineStorage implements IStorage {
         ];
 
         await fs.writeFile(MEMORY_FILE_PATH, lines.join("\n") + (lines.length > 0 ? "\n" : ""));
-
-        // Update cache after successful save
-        this.cachedGraph = {
-            nodes: [...graph.nodes],
-            edges: [...graph.edges]
-        };
     }
 
     /**
-     * Loads specific edges by their IDs from the cache.
+     * Loads specific edges by their IDs from storage.
      */
     async loadEdgesByIds(edgeIds: string[]): Promise<Edge[]> {
+        const graph = await this.loadGraph();
+        const edgeMap = new Map(
+            graph.edges.map(edge => [this.generateEdgeId(edge), edge])
+        );
+
         return edgeIds
-            .map(id => this.edgeCache.get(id))
+            .map(id => edgeMap.get(id))
             .filter((edge): edge is Edge => edge !== undefined);
     }
 
@@ -178,9 +157,6 @@ export class JsonLineStorage implements IStorage {
             this.edgeIndex.byType.set(edge.edgeType, new Set());
         }
         this.edgeIndex.byType.get(edge.edgeType)?.add(edgeId);
-
-        // Cache the edge
-        this.edgeCache.set(edgeId, edge);
     }
 
     /**
@@ -191,12 +167,11 @@ export class JsonLineStorage implements IStorage {
     }
 
     /**
-     * Clears all edge indices and cache.
+     * Clears all edge indices.
      */
     private clearIndices(): void {
         this.edgeIndex.byFrom.clear();
         this.edgeIndex.byTo.clear();
         this.edgeIndex.byType.clear();
-        this.edgeCache.clear();
     }
 }
