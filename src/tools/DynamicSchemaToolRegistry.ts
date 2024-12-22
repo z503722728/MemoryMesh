@@ -158,16 +158,34 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
 
             switch (operation) {
                 case 'add': {
-                    const {nodes, edges} = await createSchemaNode(
-                        args[schemaName],
-                        schema,
-                        schemaName
-                    );
-                    await knowledgeGraphManager.addNodes(nodes);
-                    if (edges.length > 0) {
-                        await knowledgeGraphManager.addEdges(edges);
+                    // First check if node exists
+                    const nodeData = args[schemaName];
+                    const existingNodes = await knowledgeGraphManager.openNodes([nodeData.name]);
+                    if (existingNodes.nodes.length > 0) {
+                        throw new Error(`Node already exists: ${nodeData.name}. Consider updating existing node.`);
                     }
-                    return {nodes, edges};
+
+                    // Create the node structure without storage operations
+                    const {nodes, edges} = await createSchemaNode(nodeData, schema, schemaName);
+
+                    // Now handle storage operations within a transaction
+                    await knowledgeGraphManager.beginTransaction();
+                    try {
+                        await knowledgeGraphManager.addNodes(nodes);
+                        if (edges.length > 0) {
+                            await knowledgeGraphManager.addEdges(edges);
+                        }
+                        await knowledgeGraphManager.commit();
+
+                        return formatToolResponse({
+                            data: {nodes, edges},
+                            message: `Successfully created ${schemaName} "${nodeData.name}"`,
+                            actionTaken: `Created ${schemaName} in the knowledge graph`
+                        });
+                    } catch (error) {
+                        await knowledgeGraphManager.rollback();
+                        throw error;
+                    }
                 }
 
                 case 'update': {
