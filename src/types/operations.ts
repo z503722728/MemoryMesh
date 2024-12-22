@@ -1,6 +1,5 @@
 // src/types/operations.ts
-
-import type {Edge, Node} from "./graph.js";
+import type {Node, Edge, Graph, Metadata} from './graph.js';
 
 /**
  * Edge update operation parameters
@@ -60,4 +59,55 @@ export interface OpenNodesResult {
  */
 export interface GetEdgesResult {
     edges: Edge[];
+}
+
+/**
+ * Interface for graph operations
+ */
+export interface IGraphOperations {
+    addNodes(nodes: Node[]): Promise<Node[]>;
+
+    updateNodes(nodes: Partial<Node>[]): Promise<Node[]>;
+
+    deleteNodes(nodeNames: string[]): Promise<void>;
+
+    addEdges(edges: Edge[]): Promise<Edge[]>;
+
+    updateEdges(edges: Edge[]): Promise<Edge[]>;
+
+    deleteEdges(edges: Edge[]): Promise<void>;
+
+    getEdges(filter?: EdgeFilter): Promise<GetEdgesResult>;
+
+    addMetadata(metadata: MetadataAddition[]): Promise<MetadataResult[]>;
+
+    deleteMetadata(deletions: MetadataDeletion[]): Promise<void>;
+}
+
+/**
+ * Interface for search operations
+ */
+export interface ISearchOperations {
+    searchNodes(query: string): Promise<OpenNodesResult>;
+
+    openNodes(names: string[]): Promise<OpenNodesResult>;
+}
+
+/**
+ * Interface for transaction operations
+ */
+export interface ITransactionOperations {
+    beginTransaction(): Promise<void>;
+
+    commit(): Promise<void>;
+
+    rollback(): Promise<void>;
+
+    withTransaction<T>(operation: () => Promise<T>): Promise<T>;
+
+    addRollbackAction(action: () => Promise<void>, description: string): Promise<void>;
+
+    isInTransaction(): boolean;
+
+    getCurrentGraph(): Graph;
 }
