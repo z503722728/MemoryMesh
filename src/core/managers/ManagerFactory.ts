@@ -4,6 +4,7 @@ import {NodeManager} from './implementations/NodeManager.js';
 import {EdgeManager} from './implementations/EdgeManager.js';
 import {MetadataManager} from './implementations/MetadataManager.js';
 import {SearchManager} from './implementations/SearchManager.js';
+import {TransactionManager} from './implementations/TransactionManager.js';
 import type {IStorage} from '../../types/storage.js';
 
 /**
@@ -37,5 +38,12 @@ export class ManagerFactory {
      */
     static createSearchManager(storage: IStorage): SearchManager {
         return new SearchManager(storage);
+    }
+
+    /**
+     * Creates a new instance of TransactionManager.
+     */
+    static createTransactionManager(storage: IStorage): TransactionManager {
+        return new TransactionManager(storage);
     }
 }

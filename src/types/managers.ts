@@ -1,7 +1,7 @@
 // src/types/managers.ts
 
-import type {Node, Edge, Metadata, Graph} from './graph.ts';
-import type {EdgeUpdate, EdgeFilter, MetadataAddition, MetadataResult, MetadataDeletion} from './operations.ts';
+import type {Node, Edge, Metadata, Graph} from './graph.js';
+import type {EdgeUpdate, EdgeFilter, MetadataAddition, MetadataResult, MetadataDeletion} from './operations.js';
 
 /**
  * Base interface for all manager operations
@@ -75,35 +75,48 @@ export interface GetEdgesResult {
  * Interface for the KnowledgeGraphManager
  */
 export interface KnowledgeGraphManager {
+    // Node operations
     addNodes(nodes: Node[]): Promise<Node[]>;
 
     updateNodes(nodes: Partial<Node>[]): Promise<Node[]>;
 
+    deleteNodes(nodeNames: string[]): Promise<void>;
+
+    // Edge operations
     addEdges(edges: Edge[]): Promise<Edge[]>;
 
     updateEdges(edges: Edge[]): Promise<Edge[]>;
 
-    addMetadata(metadata: MetadataAddition[]): Promise<MetadataResult[]>; // Changed return type
-    deleteNodes(nodeNames: string[]): Promise<void>;
+    deleteEdges(edges: Edge[]): Promise<void>;
+
+    getEdges(filter?: EdgeFilter): Promise<GetEdgesResult>;
+
+    // Metadata operations
+    addMetadata(metadata: MetadataAddition[]): Promise<MetadataResult[]>;
 
     deleteMetadata(deletions: MetadataDeletion[]): Promise<void>;
 
-    deleteEdges(edges: Edge[]): Promise<void>;
+    // Search operations
+    searchNodes(query: string): Promise<OpenNodesResult>;
+
+    openNodes(names: string[]): Promise<OpenNodesResult>;
 
     readGraph(): Promise<Graph>;
 
-    searchNodes(query: string): Promise<Graph>;
+    // Transaction operations
+    beginTransaction(): Promise<void>;
 
-    openNodes(names: string[]): Promise<Graph>;
+    commit(): Promise<void>;
 
-    getEdges(filter?: EdgeFilter): Promise<{ edges: Edge[] }>;
-}
+    rollback(): Promise<void>;
 
-/**
- * Base interface for all manager operations
- */
-export interface IManagerOperations {
-    initialize(): Promise<void>;
+    withTransaction<T>(operation: () => Promise<T>): Promise<T>;
+
+    addRollbackAction(action: () => Promise<void>, description: string): Promise<void>;
+
+    isInTransaction(): boolean;
+
+    getCurrentGraph(): Graph;
 }
 
 /**
@@ -159,6 +172,23 @@ export interface ISearchManager extends IManager {
     searchNodes(query: string): Promise<Graph>;
 
     openNodes(names: string[]): Promise<Graph>;
+}
+
+/**
+ * Transaction manager specific operations
+ */
+export interface ITransactionManager extends IManager {
+    beginTransaction(): Promise<void>;
+
+    commit(): Promise<void>;
+
+    rollback(): Promise<void>;
+
+    addRollbackAction(action: () => Promise<void>, description: string): Promise<void>;
+
+    isInTransaction(): boolean;
+
+    getCurrentGraph(): Graph;
 }
 
 /**

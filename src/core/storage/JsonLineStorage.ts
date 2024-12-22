@@ -4,6 +4,7 @@ import {promises as fs} from 'fs';
 import {CONFIG} from '../../config/config.js';
 import type {IStorage} from '../../types/storage.js';
 import type {Edge, Graph, Node} from '../../types/graph.js';
+import path from 'path';
 
 /**
  * Handles persistent storage of the knowledge graph using a JSON Lines file format.
@@ -15,6 +16,7 @@ export class JsonLineStorage implements IStorage {
         byType: Map<string, Set<string>>;
     };
     private edgeCache: Map<string, Edge>;
+    private initialized: boolean;
 
     constructor() {
         this.edgeIndex = {
@@ -23,12 +25,48 @@ export class JsonLineStorage implements IStorage {
             byType: new Map()
         };
         this.edgeCache = new Map();
+        this.initialized = false;
+    }
+
+    /**
+     * Ensures the storage file and directory exist
+     */
+    private async ensureStorageExists(): Promise<void> {
+        if (this.initialized) {
+            return;
+        }
+
+        const MEMORY_FILE_PATH = CONFIG.PATHS.MEMORY_FILE;
+        const dir = path.dirname(MEMORY_FILE_PATH);
+
+        try {
+            // Check if directory exists, create if it doesn't
+            try {
+                await fs.access(dir);
+            } catch {
+                await fs.mkdir(dir, {recursive: true});
+            }
+
+            // Check if file exists, create if it doesn't
+            try {
+                await fs.access(MEMORY_FILE_PATH);
+            } catch {
+                await fs.writeFile(MEMORY_FILE_PATH, '');
+            }
+
+            this.initialized = true;
+        } catch (error) {
+            console.error('Error initializing storage:', error);
+            throw new Error('Failed to initialize storage');
+        }
     }
 
     /**
      * Loads the entire knowledge graph from storage and builds the edge indices.
      */
     async loadGraph(): Promise<Graph> {
+        await this.ensureStorageExists();
+
         try {
             const MEMORY_FILE_PATH = CONFIG.PATHS.MEMORY_FILE;
             const data = await fs.readFile(MEMORY_FILE_PATH, "utf-8");
@@ -39,17 +77,22 @@ export class JsonLineStorage implements IStorage {
 
             const graph: Graph = {nodes: [], edges: []};
 
-            lines.forEach(line => {
-                const item = JSON.parse(line);
-                if (item.type === "node") {
-                    graph.nodes.push(item as Node);
+            for (const line of lines) {
+                try {
+                    const item = JSON.parse(line);
+                    if (item.type === "node") {
+                        graph.nodes.push(item as Node);
+                    }
+                    if (item.type === "edge") {
+                        const edge = item as Edge;
+                        graph.edges.push(edge);
+                        this.indexEdge(edge);
+                    }
+                } catch (parseError) {
+                    console.error('Error parsing line:', line, parseError);
+                    // Continue processing other lines
                 }
-                if (item.type === "edge") {
-                    const edge = item as Edge;
-                    graph.edges.push(edge);
-                    this.indexEdge(edge);
-                }
-            });
+            }
 
             return graph;
         } catch (error) {
@@ -64,6 +107,8 @@ export class JsonLineStorage implements IStorage {
      * Saves the entire knowledge graph to storage.
      */
     async saveGraph(graph: Graph): Promise<void> {
+        await this.ensureStorageExists();
+
         const MEMORY_FILE_PATH = CONFIG.PATHS.MEMORY_FILE;
 
         // Clear and rebuild indices
@@ -75,7 +120,7 @@ export class JsonLineStorage implements IStorage {
             ...graph.edges.map(edge => JSON.stringify(edge)),
         ];
 
-        await fs.writeFile(MEMORY_FILE_PATH, lines.join("\n"));
+        await fs.writeFile(MEMORY_FILE_PATH, lines.join("\n") + (lines.length > 0 ? "\n" : ""));
     }
 
     /**

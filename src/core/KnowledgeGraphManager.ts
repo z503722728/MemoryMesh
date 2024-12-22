@@ -15,7 +15,8 @@ import type {
     INodeManager,
     IEdgeManager,
     IMetadataManager,
-    ISearchManager
+    ISearchManager,
+    ITransactionManager
 } from '../types/managers.js';
 import type {IStorage} from '../types/storage.js';
 
@@ -29,6 +30,7 @@ export class KnowledgeGraphManager {
     private readonly edgeManager: IEdgeManager;
     private readonly metadataManager: IMetadataManager;
     private readonly searchManager: ISearchManager;
+    private readonly transactionManager: ITransactionManager;
 
     /**
      * Creates an instance of KnowledgeGraphManager.
@@ -39,6 +41,50 @@ export class KnowledgeGraphManager {
         this.edgeManager = ManagerFactory.createEdgeManager(this.storage);
         this.metadataManager = ManagerFactory.createMetadataManager(this.storage);
         this.searchManager = ManagerFactory.createSearchManager(this.storage);
+        this.transactionManager = ManagerFactory.createTransactionManager(this.storage);
+    }
+
+    /**
+     * Begins a new transaction.
+     */
+    async beginTransaction(): Promise<void> {
+        return this.transactionManager.beginTransaction();
+    }
+
+    /**
+     * Commits the current transaction.
+     */
+    async commit(): Promise<void> {
+        return this.transactionManager.commit();
+    }
+
+    /**
+     * Rolls back the current transaction.
+     */
+    async rollback(): Promise<void> {
+        return this.transactionManager.rollback();
+    }
+
+    /**
+     * Executes an operation within a transaction and handles commit/rollback.
+     */
+    async withTransaction<T>(operation: () => Promise<T>): Promise<T> {
+        await this.beginTransaction();
+        try {
+            const result = await operation();
+            await this.commit();
+            return result;
+        } catch (error) {
+            await this.rollback();
+            throw error;
+        }
+    }
+
+    /**
+     * Adds a rollback action to the current transaction.
+     */
+    async addRollbackAction(action: () => Promise<void>, description: string): Promise<void> {
+        return this.transactionManager.addRollbackAction(action, description);
     }
 
     /**
@@ -124,5 +170,19 @@ export class KnowledgeGraphManager {
     async getEdges(filter?: EdgeFilter): Promise<GetEdgesResult> {
         const edges = await this.edgeManager.getEdges(filter);
         return {edges};
+    }
+
+    /**
+     * Checks if currently in a transaction.
+     */
+    isInTransaction(): boolean {
+        return this.transactionManager.isInTransaction();
+    }
+
+    /**
+     * Gets the current state of the graph within a transaction.
+     */
+    getCurrentGraph(): Graph {
+        return this.transactionManager.getCurrentGraph();
     }
 }
