@@ -132,8 +132,7 @@ export class KnowledgeGraphManager {
      */
 
     async readGraph(): Promise<Graph> {
-        const result = await this.searchOperations.openNodes([]);
-        return result;
+        return await this.searchOperations.readGraph();
     }
 
     async searchNodes(query: string): Promise<OpenNodesResult> {

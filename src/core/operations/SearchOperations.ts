@@ -23,4 +23,11 @@ export class SearchOperations extends EventEmitter {
         this.emit('afterOpenNodes', result);
         return result;
     }
+
+    async readGraph(): Promise<Graph> {
+        this.emit('beforeReadGraph', {});
+        const result = await this.searchManager.readGraph();
+        this.emit('afterReadGraph', result);
+        return result;
+    }
 }

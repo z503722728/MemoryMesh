@@ -17,6 +17,7 @@ export class JsonLineStorage implements IStorage {
     };
     private edgeCache: Map<string, Edge>;
     private initialized: boolean;
+    private cachedGraph: Graph | null;
 
     constructor() {
         this.edgeIndex = {
@@ -26,6 +27,7 @@ export class JsonLineStorage implements IStorage {
         };
         this.edgeCache = new Map();
         this.initialized = false;
+        this.cachedGraph = null;
     }
 
     /**
@@ -67,6 +69,14 @@ export class JsonLineStorage implements IStorage {
     async loadGraph(): Promise<Graph> {
         await this.ensureStorageExists();
 
+        // Return cached graph if available
+        if (this.cachedGraph) {
+            return {
+                nodes: [...this.cachedGraph.nodes],
+                edges: [...this.cachedGraph.edges]
+            };
+        }
+
         try {
             const MEMORY_FILE_PATH = CONFIG.PATHS.MEMORY_FILE;
             const data = await fs.readFile(MEMORY_FILE_PATH, "utf-8");
@@ -90,14 +100,21 @@ export class JsonLineStorage implements IStorage {
                     }
                 } catch (parseError) {
                     console.error('Error parsing line:', line, parseError);
-                    // Continue processing other lines
                 }
             }
+
+            // Cache the loaded graph
+            this.cachedGraph = {
+                nodes: [...graph.nodes],
+                edges: [...graph.edges]
+            };
 
             return graph;
         } catch (error) {
             if (error instanceof Error && 'code' in error && error.code === "ENOENT") {
-                return {nodes: [], edges: []};
+                const emptyGraph = {nodes: [], edges: []};
+                this.cachedGraph = emptyGraph;
+                return emptyGraph;
             }
             throw error;
         }
@@ -121,6 +138,12 @@ export class JsonLineStorage implements IStorage {
         ];
 
         await fs.writeFile(MEMORY_FILE_PATH, lines.join("\n") + (lines.length > 0 ? "\n" : ""));
+
+        // Update cache after successful save
+        this.cachedGraph = {
+            nodes: [...graph.nodes],
+            edges: [...graph.edges]
+        };
     }
 
     /**
