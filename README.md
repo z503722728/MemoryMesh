@@ -1,45 +1,50 @@
 # MemoryMesh
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![smithery badge](https://smithery.ai/badge/memorymesh)](https://smithery.ai/protocol/memorymesh) 
+[![smithery badge](https://smithery.ai/badge/memorymesh)](https://smithery.ai/protocol/memorymesh)
 
-A knowledge graph server designed for AI models, with a focus on text-based RPGs and interactive storytelling. Built to help AI maintain consistent, structured memory across conversations.
+MemoryMesh is a knowledge graph server designed for AI models, with a focus on text-based RPGs and interactive storytelling. It helps AI maintain consistent, structured memory across conversations, enabling richer and more dynamic interactions.
 
 *The project is based on the [Knowledge Graph Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) from the MCP servers repository and retains its core functionality.*
 
 ## Why MemoryMesh?
 
-- **AI-First Design**: Tools and schemas specifically crafted for AI interaction
-- **Dynamic & Flexible**: Automatically generates tools from your schema definitions
-- **RPG-Ready**: Comes with 11 pre-built schemas for gaming scenarios
-- **Visual Tools**: Includes a Schema Manager for easy configuration
+* **AI-First Design**: Tools and schemas specifically crafted for AI interaction
+* **Dynamic & Flexible**: Automatically generates tools from your schema definitions
+* **RPG-Ready**: Comes with 11 pre-built schemas for gaming scenarios
+* **Visual Schema Management:** Includes a Schema Manager tool for easy creation and configuration of schemas.
+* **Memory Visualization:** Offers a Memory Viewer tool to help you understand and explore the knowledge graph.
 
-[Quick Start](#installation) | [Docs](#overview) | [Examples](#example) | [Schema Guide](https://github.com/CheMiguel23/MemoryMesh/discussions/3)
+## Quick Links
+
+*   [Installation](#installation)
+*   [Example](#example)
+*   [SchemaManager Guide Discussion](https://github.com/CheMiguel23/MemoryMesh/discussions/3)
+*   [MemoryViewer Guide Discussion](https://github.com/CheMiguel23/MemoryMesh/discussions/15)
 
 ## Overview
 
-MemoryMesh is a local knowledge graph server designed to help you build and manage structured information for AI models. It's particularly well-suited for text-based RPG settings but can be easily adapted for other applications like social network simulations, organizational planning, or any scenario involving structured data.
-
-MemoryMesh is built to work seamlessly with AI. Its **dynamic schema-based tools**, **metadata expansion** features, and focus on relationships allow AI easily understand and interact with the memory.
+MemoryMesh is a local knowledge graph server that empowers you to build and manage structured information for AI models. While particularly well-suited for text-based RPGs, its adaptable design makes it useful for various applications, including social network simulations, organizational planning, or any scenario involving structured data.
 
 ### Key Features
 
-* **Dynamic Schema-Based Tools:** MemoryMesh supports **creating dynamic tools directly from schema definitions**. You can add a schema file, and the **server automatically generates** add_, update_, and delete_ tools for that entity type.
-* **Schemas:** Allows the creation of "schemas" that **pushes AI** in generating necessary nodes (entities) throughout your sessions. A separate tool included! _(more details below)_
-* **Metadata Expansion:** Define required, optional, and enumerated fields on nodes. This structure **guides AI**, ensuring it provides the information you need.
-* **Relationships Made Easy:** By including relationship definitions within schemas, **AI will be forced** to create edges and related nodes.
-* **AI Awareness:** Tools are designed to **inform the AI about the data that is expected**. The AI can use these tools to maintain a consistent and accurate knowledge graph as the narrative or data scenario progresses.
-* **Update nodes and edges**: An update tool has been added to modify nodes and edges.
-* **Event Support:** An event system is in place to track operations.
-* **Informative error feedback** to the AI, helping it understand and potentially self-correct when tool calls fail.
+*   **Dynamic Schema-Based Tools:** Define your data structure with schemas, and MemoryMesh automatically generates tools for adding, updating, and deleting data.
+*   **Intuitive Schema Design:** Create schemas that guide the AI in generating and connecting nodes, using required fields, enumerated types, and relationship definitions.
+*   **Metadata for AI Guidance:**  Use metadata to provide context and structure, helping the AI understand the meaning and relationships within your data.
+*   **Relationship Handling:** Define relationships within your schemas to encourage the AI to create connections (edges) between related data points (nodes).
+*   **Informative Feedback:**  Provides error feedback to the AI, enabling it to learn from mistakes and improve its interactions with the knowledge graph.
+*   **Event Support:** An event system tracks operations, providing insights into how the knowledge graph is being modified.
 
-### Nodes and edges
+#### Nodes
 
-Nodes represent entities or concepts. Each node includes:
+Nodes represent entities or concepts within the knowledge graph. Each node has:
 
-* `name`: A unique identifier for the node.
-* `nodeType`: Category or type of the node (e.g., `npc`, `artifact`, `location`)
-* `metadata`: Array of strings containing descriptive details.
+* `name`: A unique identifier.
+* `nodeType`: The type of the node (e.g., `npc`, `artifact`, `location`), defined by your schemas.
+* `metadata`: An array of strings providing descriptive details about the node.
+
+**Example Node:**
+
 ```json
     {
       "name": "Aragorn",
@@ -55,10 +60,12 @@ Nodes represent entities or concepts. Each node includes:
 
 #### Edges
 
-Edges represent relationships between nodes:
-* `from`: Source node’s name
-* `to`: Target node’s name
-* `edgeType`: Type of relationship (e.g., `owns`, `located_in`)
+Edges represent relationships between nodes. Each edge has:
+
+* `from`: The name of the source node.
+* `to`: The name of the target node.
+* `edgeType`: The type of relationship (e.g., `owns`, `located_in`).
+
 ```json
 {
   "from": "Aragorn",
@@ -67,23 +74,18 @@ Edges represent relationships between nodes:
 }
 ```
 
-### Schemas
+#### Schemas
 
-#### SchemaManager tool - an easy way to create and edit your schemas!
+Schemas are the heart of MemoryMesh. They define the structure of your data and drive the automatic generation of tools.
 
-[SchemaManager tool](https://github.com/CheMiguel23/MemoryMesh/blob/main/SchemaManager.html) included in the repository to simplify schema creation and editing.
+##### Schema File Location
 
-Try it out! It provides a visual interface for defining your schemas, making the process much more intuitive. See the [guide](https://github.com/CheMiguel23/MemoryMesh/discussions/3)  for detailed instructions.
+Place your schema files (`.schema.json`) in the `dist/config/schemas` directory of your built MemoryMesh project. MemoryMesh will automatically detect and process these files on startup.
 
-<img width="370" alt="image" src="https://github.com/user-attachments/assets/e8f0c808-2ff6-48da-ac7c-cf51aebde7b8">
+##### Schema Structure
 
-#### Details
+File name: `[name].schema.json`. For example, for a schema defining an 'npc', the filename would be `add_npc.schema.json`.
 
-The most important part of the application.
-Schemas define how nodes and edges should be structured for a particular entity type. By placing a schema in `dist/config/schemas/`, MemoryMesh **automatically generates tools** `add_<nodeType>`, `update_<nodeType>`, and `delete_<nodeType>`.
-File name: `[name].schema.json`
-
-Schema Fields:
 * `name` - Identifier for the schema and node type within the memory. **IMPORTANT**: The schema’s name *must* start with `add_` to be recognized.
 * `description` - Used as the description for the `add_<name>` tool, providing context for the AI. *(The `delete` and `update` tools have a generic description)*
 * `properties` - Each property includes its type, description, and additional constraints.
@@ -97,7 +99,7 @@ Schema Fields:
             * `description` - Helps guide the AI on the relationship’s purpose.
 * `additionalProperties` - Boolean. If `true`, allows the AI to add extra attributes beyond those defined as required or optional.
 
-#### Schema Implementation and example
+##### Example Schema (add_npc.schema.json):
 
 ```json
 {
@@ -135,25 +137,62 @@ Schema Fields:
 }
 ```
 
-With this schema, the server creates the following tools:
-* `add_npc`
-* `update_npc`
-* `delete_npc`
+Based on this schema, MemoryMesh automatically creates:
+* add_npc: To add new NPC nodes.
+* update_npc: To modify existing NPC nodes.
+* delete_npc: To remove NPC nodes.
 
-**IMPORTANT:** This repository includes 11 RPG-theme schemas that you can freely explore, modify and create your own! 
+MemoryMesh includes 11 pre-built schemas designed for text-based RPGs, providing a ready-to-use foundation for game development.
+
+##### SchemaManager Tool
+
+MemoryMesh includes a [SchemaManager tool](https://github.com/CheMiguel23/MemoryMesh/blob/main/SchemaManager.html) to simplify schema creation and editing. It provides a visual interface, making it easy to define your data structures without writing JSON directly.
+
+<img width="370" alt="image" src="https://github.com/user-attachments/assets/e8f0c808-2ff6-48da-ac7c-cf51aebde7b8">
+
+### Dynamic Tools
+
+MemoryMesh simplifies interaction with your knowledge graph through **dynamic tools**. These tools are not manually coded but are **automatically generated** directly from your **schema definitions**. This means that when you define the structure of your data using schemas, MemoryMesh intelligently creates a set of tools tailored to work with that specific data structure.
+
+**Think of it like this:** You provide a blueprint (the schema), and MemoryMesh automatically constructs the necessary tools to build, modify, and remove elements based on that blueprint.
+
+#### How does it work behind the scenes?
+
+MemoryMesh has an intelligent system that reads your schema definitions. It analyzes the structure you've defined, including the properties of your entities and their relationships. Based on this analysis, it automatically creates a set of tools for each entity type:
+
+*   **`add_<entity>`:**  A tool for creating new instances of an entity.
+*   **`update_<entity>`:** A tool for modifying existing entities.
+*   **`delete_<entity>`:** A tool for removing entities.
+
+These tools are then made available through a central hub within MemoryMesh, ensuring they can be easily accessed and used by any connected client or AI.
+
+**In essence, MemoryMesh's dynamic tool system provides a powerful and efficient way to manage your knowledge graph, freeing you to focus on the content and logic of your application rather than the underlying mechanics of data manipulation.**
 
 ### Memory file
 
 By default, data is stored in a JSON file in `dist/data/memory.json`.
 
-A sepate [Memory Viewer](https://github.com/CheMiguel23/MemoryMesh/discussions/15) tool is available.
+#### Memory Viewer
 
-## Custom implementation
+The Memory Viewer is a separate tool designed to help you visualize and inspect the contents of the knowledge graph managed by MemoryMesh. It provides a user-friendly interface for exploring nodes, edges, and their properties.
 
-To add a new entity type:
-1. Create a schema file in `dist/config/schemas/` (e.g., city.schema.json).
-2. Restart the server.
-3. The dynamic tools (add_city, update_city, delete_city) will be available automatically.
+##### Key Features:
+* Graph Visualization: View the knowledge graph as an interactive node-link diagram.
+* Node Inspection: Select nodes to see their nodeType, metadata, and connected edges.
+* Edge Exploration: Examine relationships between nodes, including edgeType and direction.
+* Search and Filtering: Quickly find specific nodes or filter them by type.
+* Table View: Allows you to easily find and inspect specific nodes and edges, or all of them at once.
+* Raw JSON View: Allows you to view the raw JSON data from the memory file.
+* Stats Panel: Provides key metrics and information about the knowledge graph: total nodes, total edges, node types, and edge types.
+* Search and Filter: Allows you to filter by node type or edge type and filter whether to show nodes, edges, or both.
+
+##### Accessing the Memory Viewer
+The Memory Viewer is a standalone web application. [Memory Viewer discussion](https://github.com/CheMiguel23/MemoryMesh/discussions/15)
+
+##### Using the Memory Viewer
+* Select Memory File: In the Memory Viewer, click the "Select Memory File" button.
+* Choose File: Navigate to your MemoryMesh project directory and select the memory.json file (usually located in dist/data/memory.json).
+* Explore: The Memory Viewer will load and display the contents of your knowledge graph.
 
 ## Memory Flow
 
@@ -306,10 +345,24 @@ To install MemoryMesh for Claude Desktop automatically via [Smithery](https://sm
 npx @smithery/cli install memorymesh --client claude
 ```
 
+### MemoryMesh on glama.ai
+<a href="https://glama.ai/mcp/servers/kf6n6221pd">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/kf6n6221pd/badge" />
+</a>
+
+## Advanced Configuration
+MemoryMesh offers several ways to customize its behavior beyond the basic setup:
+
+### Variables
+You can override default settings using in `/config/config.ts`
+* MEMORY_FILE: Specifies the path to the JSON file used for storing the knowledge graph data. (Default: dist/data/memory.json)
+* SCHEMAS_DIR: Path to schema files directory
+
 ## Limitations
 
-1. **Node Deletion:** The AI may be reluctant to delete nodes from the knowledge graph.
+1. **Node Deletion:** The AI may be hesitant to delete nodes from the knowledge graph. Encourage it through prompts if needed.
 
 ## Contribution
 
+Contributions, feedback, and ideas are welcome!
 This project is a personal exploration into integrating structured data with AI reasoning capabilities. Contributions, feedback, and ideas are welcome to push it further or inspire new projects.
