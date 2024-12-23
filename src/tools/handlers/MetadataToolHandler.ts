@@ -1,7 +1,7 @@
 // src/tools/handlers/MetadataToolHandler.ts
 
 import {BaseToolHandler} from './BaseToolHandler.js';
-import {formatToolResponse} from '../../utils/responseFormatter.js';
+import {formatToolResponse, formatToolError} from '../../utils/responseFormatter.js';
 import type {ToolResponse} from '../../types/tools.js';
 
 export class MetadataToolHandler extends BaseToolHandler {
@@ -11,24 +11,35 @@ export class MetadataToolHandler extends BaseToolHandler {
 
             switch (name) {
                 case "add_metadata":
+                    const addResult = await this.knowledgeGraphManager.addMetadata(args.metadata);
                     return formatToolResponse({
-                        data: {metadata: await this.knowledgeGraphManager.addMetadata(args.metadata)},
-                        message: `Successfully added metadata`,
-                        actionTaken: "Added metadata to nodes in the knowledge graph"
+                        data: {metadata: addResult},
+                        actionTaken: "Added metadata to nodes"
                     });
 
                 case "delete_metadata":
                     await this.knowledgeGraphManager.deleteMetadata(args.deletions);
                     return formatToolResponse({
-                        message: `Successfully deleted metadata`,
-                        actionTaken: "Deleted metadata from nodes in the knowledge graph"
+                        actionTaken: "Deleted metadata from nodes"
                     });
 
                 default:
                     throw new Error(`Unknown metadata operation: ${name}`);
             }
         } catch (error) {
-            return this.handleError(name, error);
+            return formatToolError({
+                operation: name,
+                error: error instanceof Error ? error.message : 'Unknown error occurred',
+                context: {args},
+                suggestions: [
+                    "Verify node existence",
+                    "Check metadata format"
+                ],
+                recoverySteps: [
+                    "Ensure nodes exist before adding metadata",
+                    "Verify metadata content format"
+                ]
+            });
         }
     }
 }

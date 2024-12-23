@@ -84,13 +84,19 @@ export class ToolsRegistry {
             return formatToolError({
                 operation: toolName,
                 error: 'KnowledgeGraphManager not initialized',
-                suggestions: ['Ensure registry is properly initialized with KnowledgeGraphManager']
+                suggestions: ["Initialize registry with KnowledgeGraphManager"],
+                recoverySteps: ["Reinitialize ToolsRegistry with proper dependencies"]
             });
         }
 
         try {
             if (!this.tools.has(toolName)) {
-                throw new Error(`Tool not found: ${toolName}`);
+                return formatToolError({
+                    operation: toolName,
+                    error: `Tool not found: ${toolName}`,
+                    context: {availableTools: Array.from(this.tools.keys())},
+                    suggestions: ["Verify tool name exists"]
+                });
             }
 
             if (dynamicToolManager.isDynamicTool(toolName)) {
@@ -101,22 +107,29 @@ export class ToolsRegistry {
                 );
             }
 
-            // For static tools, the handler will be determined by the ToolHandlerFactory
-            // This preserves existing behavior while providing a unified interface
+            // For static tools, return success response
             return {
                 toolResult: {
                     isError: false,
-                    content: [],
                     data: args,
-                    timestamp: new Date().toISOString()
+                    actionTaken: `Executed tool: ${toolName}`,
+                    timestamp: new Date().toISOString(),
+                    content: []
                 }
             };
         } catch (error) {
             return formatToolError({
                 operation: toolName,
                 error: error instanceof Error ? error.message : 'Unknown error occurred',
-                context: {args},
-                suggestions: ['Verify the tool name and arguments are correct']
+                context: {toolName, args},
+                suggestions: [
+                    "Check tool name and arguments",
+                    "Verify tool registration"
+                ],
+                recoverySteps: [
+                    "Review tool documentation",
+                    "Ensure tool is properly registered"
+                ]
             });
         }
     }

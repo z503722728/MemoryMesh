@@ -3,7 +3,7 @@
 import {formatToolResponse, formatToolError} from '../../utils/responseFormatter.js';
 import type {Node, Edge, Graph} from '../../types/graph.js';
 import type {ToolResponse} from '../../types/tools.js';
-import type { KnowledgeGraphManager } from '../../core/KnowledgeGraphManager.js';
+import type {KnowledgeGraphManager} from '../../core/KnowledgeGraphManager.js';
 import type {SchemaConfig} from './schemaBuilder.js';
 
 interface NodeData {
@@ -241,7 +241,12 @@ export async function handleSchemaUpdate(
         const node = result.nodes.find((n: Node) => n.nodeType === nodeType);
 
         if (!node) {
-            throw new Error(`${nodeType} "${updates.name}" not found`);
+            return formatToolError({
+                operation: 'updateSchema',
+                error: `${nodeType} "${updates.name}" not found`,
+                context: {updates, nodeType},
+                suggestions: ["Verify the node exists", "Check node type matches"]
+            });
         }
 
         // Get relevant edges
@@ -276,17 +281,22 @@ export async function handleSchemaUpdate(
         await knowledgeGraphManager.updateNodes([updatedNode]);
 
         return formatToolResponse({
-            data: {updatedNodes: [updatedNode]},
-            message: `Successfully updated ${nodeType} "${updatedNode.name}"`,
-            actionTaken: `Updated ${nodeType} in the knowledge graph`
+            data: {updatedNode},
+            actionTaken: `Updated ${nodeType}: ${updatedNode.name}`
         });
-    } catch (error: Error | unknown) {
-        const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    } catch (error) {
         return formatToolError({
-            operation: 'handleSchemaUpdate',
-            error: message,
+            operation: 'updateSchema',
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
             context: {updates, schema, nodeType},
-            suggestions: ["Review the schema definition and the update data format", "Ensure that the node being updated exists"]
+            suggestions: [
+                "Check all required fields are provided",
+                "Verify relationship targets exist"
+            ],
+            recoverySteps: [
+                "Review schema requirements",
+                "Ensure node exists before updating"
+            ]
         });
     }
 }
@@ -301,22 +311,32 @@ export async function handleSchemaDelete(
         const node = graph.nodes.find((n: Node) => n.name === nodeName && n.nodeType === nodeType);
 
         if (!node) {
-            throw new Error(`${nodeType} "${nodeName}" not found`);
+            return formatToolError({
+                operation: 'deleteSchema',
+                error: `${nodeType} "${nodeName}" not found`,
+                context: {nodeName, nodeType},
+                suggestions: ["Verify node name and type"]
+            });
         }
 
         await knowledgeGraphManager.deleteNodes([nodeName]);
 
         return formatToolResponse({
-            message: `Successfully deleted ${nodeType} "${nodeName}"`,
-            actionTaken: `Deleted ${nodeType} from the knowledge graph`
+            actionTaken: `Deleted ${nodeType}: ${nodeName}`
         });
-    } catch (error: Error | unknown) {
-        const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    } catch (error) {
         return formatToolError({
-            operation: 'handleSchemaDelete',
-            error: message,
+            operation: 'deleteSchema',
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
             context: {nodeName, nodeType},
-            suggestions: ["Ensure that the node being deleted exists"]
+            suggestions: [
+                "Check node exists",
+                "Verify delete permissions"
+            ],
+            recoverySteps: [
+                "Ensure no dependent nodes exist",
+                "Try retrieving node first"
+            ]
         });
     }
 }

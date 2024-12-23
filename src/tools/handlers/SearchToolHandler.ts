@@ -1,7 +1,7 @@
 // src/tools/handlers/SearchToolHandler.ts
 
 import {BaseToolHandler} from './BaseToolHandler.js';
-import {formatToolResponse} from '../../utils/responseFormatter.js';
+import {formatToolResponse, formatToolError} from '../../utils/responseFormatter.js';
 import type {ToolResponse} from '../../types/tools.js';
 
 export class SearchToolHandler extends BaseToolHandler {
@@ -11,31 +11,43 @@ export class SearchToolHandler extends BaseToolHandler {
 
             switch (name) {
                 case "read_graph":
+                    const graph = await this.knowledgeGraphManager.readGraph();
                     return formatToolResponse({
-                        data: await this.knowledgeGraphManager.readGraph(),
-                        message: `Successfully read the knowledge graph`,
-                        actionTaken: "Read the knowledge graph"
+                        data: graph,
+                        actionTaken: "Read complete knowledge graph"
                     });
 
                 case "search_nodes":
+                    const searchResults = await this.knowledgeGraphManager.searchNodes(args.query);
                     return formatToolResponse({
-                        data: await this.knowledgeGraphManager.searchNodes(args.query),
-                        message: `Successfully searched nodes with query: ${args.query}`,
-                        actionTaken: "Searched nodes in the knowledge graph"
+                        data: searchResults,
+                        actionTaken: `Searched nodes with query: ${args.query}`
                     });
 
                 case "open_nodes":
+                    const nodes = await this.knowledgeGraphManager.openNodes(args.names);
                     return formatToolResponse({
-                        data: await this.knowledgeGraphManager.openNodes(args.names),
-                        message: `Successfully opened nodes: ${args.names.join(', ')}`,
-                        actionTaken: "Opened nodes in the knowledge graph"
+                        data: nodes,
+                        actionTaken: `Retrieved nodes: ${args.names.join(', ')}`
                     });
 
                 default:
                     throw new Error(`Unknown search operation: ${name}`);
             }
         } catch (error) {
-            return this.handleError(name, error);
+            return formatToolError({
+                operation: name,
+                error: error instanceof Error ? error.message : 'Unknown error occurred',
+                context: {args},
+                suggestions: [
+                    "Check node names exist",
+                    "Verify search query format"
+                ],
+                recoverySteps: [
+                    "Try with different node names",
+                    "Adjust search query parameters"
+                ]
+            });
         }
     }
 }

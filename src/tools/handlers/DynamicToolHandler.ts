@@ -2,7 +2,7 @@
 
 import {BaseToolHandler} from './BaseToolHandler.js';
 import {dynamicToolManager} from '../registry/dynamicTools.js';
-import {formatToolResponse} from '../../utils/responseFormatter.js';
+import {formatToolResponse, formatToolError} from '../../utils/responseFormatter.js';
 import type {ToolResponse} from '../../types/tools.js';
 
 export class DynamicToolHandler extends BaseToolHandler {
@@ -12,19 +12,27 @@ export class DynamicToolHandler extends BaseToolHandler {
 
             const toolResult = await dynamicToolManager.handleToolCall(name, args, this.knowledgeGraphManager);
 
-            // If the result is already formatted as a ToolResponse, return it directly
             if (toolResult?.toolResult?.isError !== undefined) {
                 return toolResult;
             }
 
-            // Otherwise, format the result
             return formatToolResponse({
                 data: toolResult,
-                message: `Successfully executed tool: ${name}`,
-                actionTaken: `Executed tool: ${name}`
+                actionTaken: `Executed dynamic tool: ${name}`
             });
         } catch (error) {
-            return this.handleError(name, error);
+            return formatToolError({
+                operation: name,
+                error: error instanceof Error ? error.message : 'Unknown error occurred',
+                context: {toolName: name, args},
+                suggestions: [
+                    "Examine the tool input parameters for correctness",
+                    "Verify that the requested operation is supported"
+                ],
+                recoverySteps: [
+                    "Adjust the input parameters based on the schema definition"
+                ]
+            });
         }
     }
 }

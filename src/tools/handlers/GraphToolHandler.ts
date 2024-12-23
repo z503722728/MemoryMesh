@@ -1,7 +1,7 @@
 // src/tools/handlers/GraphToolHandler.ts
 
 import {BaseToolHandler} from './BaseToolHandler.js';
-import {formatToolResponse} from '../../utils/responseFormatter.js';
+import {formatToolResponse, formatToolError} from '../../utils/responseFormatter.js';
 import type {ToolResponse} from '../../types/tools.js';
 
 export class GraphToolHandler extends BaseToolHandler {
@@ -11,52 +11,62 @@ export class GraphToolHandler extends BaseToolHandler {
 
             switch (name) {
                 case "add_nodes":
+                    const addedNodes = await this.knowledgeGraphManager.addNodes(args.nodes);
                     return formatToolResponse({
-                        data: {nodes: await this.knowledgeGraphManager.addNodes(args.nodes)},
-                        message: `Successfully added ${args.nodes.length} nodes`,
-                        actionTaken: "Added nodes to the knowledge graph"
+                        data: {nodes: addedNodes},
+                        actionTaken: "Added nodes to knowledge graph"
                     });
 
                 case "update_nodes":
+                    const updatedNodes = await this.knowledgeGraphManager.updateNodes(args.nodes);
                     return formatToolResponse({
-                        data: {nodes: await this.knowledgeGraphManager.updateNodes(args.nodes)},
-                        message: `Successfully updated ${args.nodes.length} nodes`,
-                        actionTaken: "Updated nodes in the knowledge graph"
+                        data: {nodes: updatedNodes},
+                        actionTaken: "Updated nodes in knowledge graph"
                     });
 
                 case "add_edges":
+                    const addedEdges = await this.knowledgeGraphManager.addEdges(args.edges);
                     return formatToolResponse({
-                        data: {edges: await this.knowledgeGraphManager.addEdges(args.edges)},
-                        message: `Successfully added ${args.edges.length} edges`,
-                        actionTaken: "Added edges to the knowledge graph"
+                        data: {edges: addedEdges},
+                        actionTaken: "Added edges to knowledge graph"
                     });
 
                 case "update_edges":
+                    const updatedEdges = await this.knowledgeGraphManager.updateEdges(args.edges);
                     return formatToolResponse({
-                        data: {edges: await this.knowledgeGraphManager.updateEdges(args.edges)},
-                        message: `Successfully updated ${args.edges.length} edges`,
-                        actionTaken: "Updated edges in the knowledge graph"
+                        data: {edges: updatedEdges},
+                        actionTaken: "Updated edges in knowledge graph"
                     });
 
                 case "delete_nodes":
                     await this.knowledgeGraphManager.deleteNodes(args.nodeNames);
                     return formatToolResponse({
-                        message: `Successfully deleted nodes: ${args.nodeNames.join(', ')}`,
-                        actionTaken: "Deleted nodes from the knowledge graph"
+                        actionTaken: `Deleted nodes: ${args.nodeNames.join(', ')}`
                     });
 
                 case "delete_edges":
                     await this.knowledgeGraphManager.deleteEdges(args.edges);
                     return formatToolResponse({
-                        message: `Successfully deleted edges`,
-                        actionTaken: "Deleted edges from the knowledge graph"
+                        actionTaken: "Deleted edges from knowledge graph"
                     });
 
                 default:
                     throw new Error(`Unknown graph operation: ${name}`);
             }
         } catch (error) {
-            return this.handleError(name, error);
+            return formatToolError({
+                operation: name,
+                error: error instanceof Error ? error.message : 'Unknown error occurred',
+                context: {args},
+                suggestions: [
+                    "Verify node/edge existence",
+                    "Check input parameters format"
+                ],
+                recoverySteps: [
+                    "Review the error details and adjust inputs",
+                    "Ensure referenced nodes exist before creating edges"
+                ]
+            });
         }
     }
 }

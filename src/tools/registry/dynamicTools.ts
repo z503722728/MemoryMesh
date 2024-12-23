@@ -65,7 +65,8 @@ export class DynamicToolManager {
             return formatToolError({
                 operation: toolName,
                 error: 'Dynamic tools not initialized',
-                suggestions: ['Ensure dynamic tools are initialized before making tool calls']
+                suggestions: ["Initialize dynamic tools before use"],
+                recoverySteps: ["Reinitialize DynamicToolManager"]
             });
         }
 
@@ -75,11 +76,17 @@ export class DynamicToolManager {
             return formatToolError({
                 operation: toolName,
                 error: error instanceof Error ? error.message : 'Unknown error occurred',
-                context: {args},
+                context: {
+                    toolName,
+                    argumentKeys: Object.keys(args)
+                },
                 suggestions: [
-                    'Verify the tool name is correct',
-                    'Check the provided arguments match the tool schema',
-                    'Ensure all required parameters are provided'
+                    "Verify tool name matches schema",
+                    "Check argument format"
+                ],
+                recoverySteps: [
+                    "Review tool schema requirements",
+                    "Ensure tool is properly registered"
                 ]
             });
         }
