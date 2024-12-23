@@ -1,6 +1,7 @@
 // src/tools/callToolHandler.ts
 
 import {ToolHandlerFactory} from './handlers/ToolHandlerFactory.js';
+import {toolsRegistry} from './registry/toolsRegistry.js';
 import {formatToolError} from '../utils/responseFormatter.js';
 import type {KnowledgeGraphManager} from '../core/KnowledgeGraphManager.js';
 import type {ToolResponse} from '../types/tools.js';
@@ -13,7 +14,7 @@ interface ToolCallRequest {
 }
 
 /**
- * Handles incoming tool call requests by routing them to the appropriate handler.
+ * Handles incoming tool call requests by routing them to the appropriate handler
  */
 export async function handleCallToolRequest(
     request: ToolCallRequest,
@@ -26,8 +27,17 @@ export async function handleCallToolRequest(
             throw new Error("Tool arguments are required");
         }
 
+        // Ensure tools registry is initialized
+        if (!toolsRegistry.hasTool(name)) {
+            return formatToolError({
+                operation: "callTool",
+                error: `Tool not found: ${name}`,
+                suggestions: ["Verify the tool name is correct", "Check if the tool is registered"]
+            });
+        }
+
         // Initialize handlers if needed
-        if (!ToolHandlerFactory.getHandler(name)) {
+        if (!ToolHandlerFactory.isInitialized()) {
             ToolHandlerFactory.initialize(knowledgeGraphManager);
         }
 
@@ -41,8 +51,11 @@ export async function handleCallToolRequest(
             operation: "callTool",
             error: error instanceof Error ? error.message : 'Unknown error occurred',
             context: {request},
-            suggestions: ["Examine the tool input parameters for correctness.", "Verify that the requested operation is supported."],
-            recoverySteps: ["Adjust the input parameters based on the schema definition."]
+            suggestions: [
+                "Examine the tool input parameters for correctness",
+                "Verify that the requested operation is supported"
+            ],
+            recoverySteps: ["Adjust the input parameters based on the schema definition"]
         });
     }
 }

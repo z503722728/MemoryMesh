@@ -178,7 +178,7 @@ export class SchemaBuilder {
     /**
      * Sets whether additional properties are allowed in the schema.
      */
-    setAdditionalProperties(allowed: boolean): SchemaBuilder {
+    allowAdditionalProperties(allowed: boolean): SchemaBuilder {
         const schemaName = this.schema.name!.replace('add_', '');
         if (this.schema.inputSchema?.properties[schemaName]) {
             if (allowed) {
