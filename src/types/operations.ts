@@ -1,4 +1,5 @@
 // src/types/operations.ts
+
 import type {Node, Edge, Graph, Metadata} from './graph.js';
 
 /**
@@ -47,14 +48,6 @@ export interface MetadataResult {
 }
 
 /**
- * Result of opening nodes
- */
-export interface OpenNodesResult {
-    nodes: Node[];
-    edges: Edge[];
-}
-
-/**
  * Result of getting edges
  */
 export interface GetEdgesResult {
@@ -62,52 +55,29 @@ export interface GetEdgesResult {
 }
 
 /**
- * Interface for graph operations
+ * Result of opening or searching nodes
  */
-export interface IGraphOperations {
-    addNodes(nodes: Node[]): Promise<Node[]>;
-
-    updateNodes(nodes: Partial<Node>[]): Promise<Node[]>;
-
-    deleteNodes(nodeNames: string[]): Promise<void>;
-
-    addEdges(edges: Edge[]): Promise<Edge[]>;
-
-    updateEdges(edges: Edge[]): Promise<Edge[]>;
-
-    deleteEdges(edges: Edge[]): Promise<void>;
-
-    getEdges(filter?: EdgeFilter): Promise<GetEdgesResult>;
-
-    addMetadata(metadata: MetadataAddition[]): Promise<MetadataResult[]>;
-
-    deleteMetadata(deletions: MetadataDeletion[]): Promise<void>;
+export interface OpenNodesResult {
+    nodes: Node[];
+    edges: Edge[];
 }
 
-/**
- * Interface for search operations
- */
-export interface ISearchOperations {
-    searchNodes(query: string): Promise<OpenNodesResult>;
-
-    openNodes(names: string[]): Promise<OpenNodesResult>;
+// Operation Results
+export interface GraphOperationResult {
+    success: boolean;
+    nodes?: Node[];
+    edges?: Edge[];
+    error?: string;
 }
 
-/**
- * Interface for transaction operations
- */
-export interface ITransactionOperations {
-    beginTransaction(): Promise<void>;
+export interface SearchOperationResult {
+    success: boolean;
+    result?: Graph;
+    error?: string;
+}
 
-    commit(): Promise<void>;
-
-    rollback(): Promise<void>;
-
-    withTransaction<T>(operation: () => Promise<T>): Promise<T>;
-
-    addRollbackAction(action: () => Promise<void>, description: string): Promise<void>;
-
-    isInTransaction(): boolean;
-
-    getCurrentGraph(): Graph;
+export interface MetadataOperationResult {
+    success: boolean;
+    results?: MetadataResult[];
+    error?: string;
 }

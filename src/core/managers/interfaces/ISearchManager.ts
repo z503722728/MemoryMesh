@@ -17,4 +17,9 @@ export abstract class ISearchManager extends IManager {
      * Retrieves specific nodes from the knowledge graph by their names.
      */
     abstract openNodes(names: string[]): Promise<Graph>;
+
+    /**
+     * Reads and returns the entire knowledge graph.
+     */
+    abstract readGraph(): Promise<Graph>;
 }

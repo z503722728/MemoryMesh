@@ -3,7 +3,7 @@
 import {formatToolResponse, formatToolError} from '../../utils/responseFormatter.js';
 import type {Node, Edge, Graph} from '../../types/graph.js';
 import type {ToolResponse} from '../../types/tools.js';
-import type {KnowledgeGraphManager} from '../../types/managers.js';
+import type { KnowledgeGraphManager } from '../../core/KnowledgeGraphManager.js';
 import type {SchemaConfig} from './schemaBuilder.js';
 
 interface NodeData {

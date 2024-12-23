@@ -1,6 +1,6 @@
 // src/tools/handlers/BaseToolHandler.ts
 
-import type {KnowledgeGraphManager} from '../../types/managers.js';
+import type {KnowledgeGraphManager} from '../../core/KnowledgeGraphManager.js';
 import type {ToolResponse} from '../../types/tools.js';
 import {formatToolError} from '../../utils/responseFormatter.js';
 

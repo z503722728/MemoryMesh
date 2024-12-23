@@ -4,7 +4,7 @@ import {GraphToolHandler} from './GraphToolHandler.js';
 import {SearchToolHandler} from './SearchToolHandler.js';
 import {MetadataToolHandler} from './MetadataToolHandler.js';
 import {DynamicToolHandler} from './DynamicToolHandler.js';
-import type {KnowledgeGraphManager} from '../../types/managers.js';
+import type {KnowledgeGraphManager} from '../../core/KnowledgeGraphManager.js';
 import type {BaseToolHandler} from './BaseToolHandler.js';
 
 export class ToolHandlerFactory {

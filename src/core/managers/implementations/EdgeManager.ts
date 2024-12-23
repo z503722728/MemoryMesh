@@ -1,6 +1,6 @@
 // src/core/managers/implementations/EdgeManager.ts
 
-import {IEdgeManager} from '../interfaces/IEdgeManager.js';
+import {IEdgeManager} from '../interfaces/index.js';
 import type {Edge} from '../../../types/graph.js';
 import type {EdgeUpdate, EdgeFilter} from '../../../types/index.js';
 import {ValidationUtils} from '../../utils/ValidationUtils.js';

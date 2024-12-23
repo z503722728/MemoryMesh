@@ -1,15 +1,15 @@
 // src/core/GraphManager.ts
 
-import {KnowledgeGraphManagerBase} from './KnowledgeGraphManagerBase.js';
-import {GraphOperations} from './operations/index.js';
-import type {Node, Edge} from '../types/graph.js';
+import {KnowledgeGraphManagerBase} from '../../KnowledgeGraphManagerBase.js';
+import {GraphOperations} from '../../operations/index.js';
+import type {Node, Edge} from '../../../types/graph.js';
 import type {
     MetadataAddition,
     MetadataDeletion,
     EdgeFilter,
     MetadataResult,
     GetEdgesResult, IStorage
-} from '../types/index.js';
+} from '../../../types/index.js';
 
 /**
  * Handles graph-specific operations (nodes, edges, metadata)

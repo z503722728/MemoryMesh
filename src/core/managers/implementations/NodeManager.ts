@@ -1,6 +1,6 @@
 // src/core/managers/implementations/NodeManager.ts
 
-import {INodeManager} from '../interfaces/INodeManager.js';
+import {INodeManager} from '../interfaces/index.js';
 import type {Node} from '../../../types/graph.js';
 import {ValidationUtils} from '../../utils/ValidationUtils.js';
 

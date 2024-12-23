@@ -6,31 +6,16 @@ export * from './events.js';
 export * from './tools.js';
 export * from './storage.js';
 
-// Operation types
+// Operation types and results
 export type {
-    IGraphOperations,
-    ISearchOperations,
-    ITransactionOperations,
     EdgeUpdate,
     EdgeFilter,
     MetadataAddition,
     MetadataDeletion,
     MetadataResult,
     GetEdgesResult,
-    OpenNodesResult
+    OpenNodesResult,
+    GraphOperationResult,
+    SearchOperationResult,
+    MetadataOperationResult
 } from './operations.js';
-
-// Manager types
-export type {
-    IManagerOperations,
-    INodeOperations,
-    IEdgeOperations,
-    IMetadataOperations,
-    ISearchOperations as ISearchManagerOperations,
-    KnowledgeGraphManager,
-    IManager,
-    INodeManager,
-    IEdgeManager,
-    IMetadataManager,
-    ISearchManager
-} from './managers.js';

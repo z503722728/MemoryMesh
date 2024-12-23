@@ -1,49 +1,103 @@
 // src/core/managers/ManagerFactory.ts
 
-import {NodeManager} from './implementations/NodeManager.js';
-import {EdgeManager} from './implementations/EdgeManager.js';
-import {MetadataManager} from './implementations/MetadataManager.js';
-import {SearchManager} from './implementations/SearchManager.js';
-import {TransactionManager} from './implementations/TransactionManager.js';
+import {
+    NodeManager,
+    EdgeManager,
+    MetadataManager,
+    SearchManager,
+    TransactionManager
+}
+    from './implementations/index.js';
 import type {IStorage} from '../../types/storage.js';
+import type {
+    INodeManager,
+    IEdgeManager,
+    IMetadataManager,
+    ISearchManager,
+    ITransactionManager
+} from './interfaces/index.js';
 
 /**
  * Factory class responsible for creating instances of various manager classes
- * used in the knowledge graph.
+ * used in the knowledge graph. Ensures consistent initialization and configuration
+ * of all manager instances.
  */
 export class ManagerFactory {
+    private static instances: {
+        nodeManager?: NodeManager;
+        edgeManager?: EdgeManager;
+        metadataManager?: MetadataManager;
+        searchManager?: SearchManager;
+        transactionManager?: TransactionManager;
+    } = {};
+
     /**
-     * Creates a new instance of NodeManager.
+     * Creates or returns an existing instance of NodeManager
      */
-    static createNodeManager(storage: IStorage): NodeManager {
-        return new NodeManager(storage);
+    static createNodeManager(storage: IStorage): INodeManager {
+        if (!this.instances.nodeManager) {
+            this.instances.nodeManager = new NodeManager(storage);
+        }
+        return this.instances.nodeManager;
     }
 
     /**
-     * Creates a new instance of EdgeManager.
+     * Creates or returns an existing instance of EdgeManager
      */
-    static createEdgeManager(storage: IStorage): EdgeManager {
-        return new EdgeManager(storage);
+    static createEdgeManager(storage: IStorage): IEdgeManager {
+        if (!this.instances.edgeManager) {
+            this.instances.edgeManager = new EdgeManager(storage);
+        }
+        return this.instances.edgeManager;
     }
 
     /**
-     * Creates a new instance of MetadataManager.
+     * Creates or returns an existing instance of MetadataManager
      */
-    static createMetadataManager(storage: IStorage): MetadataManager {
-        return new MetadataManager(storage);
+    static createMetadataManager(storage: IStorage): IMetadataManager {
+        if (!this.instances.metadataManager) {
+            this.instances.metadataManager = new MetadataManager(storage);
+        }
+        return this.instances.metadataManager;
     }
 
     /**
-     * Creates a new instance of SearchManager.
+     * Creates or returns an existing instance of SearchManager
      */
-    static createSearchManager(storage: IStorage): SearchManager {
-        return new SearchManager(storage);
+    static createSearchManager(storage: IStorage): ISearchManager {
+        if (!this.instances.searchManager) {
+            this.instances.searchManager = new SearchManager(storage);
+        }
+        return this.instances.searchManager;
     }
 
     /**
-     * Creates a new instance of TransactionManager.
+     * Creates or returns an existing instance of TransactionManager
      */
-    static createTransactionManager(storage: IStorage): TransactionManager {
-        return new TransactionManager(storage);
+    static createTransactionManager(storage: IStorage): ITransactionManager {
+        if (!this.instances.transactionManager) {
+            this.instances.transactionManager = new TransactionManager(storage);
+        }
+        return this.instances.transactionManager;
+    }
+
+    /**
+     * Creates all manager instances at once
+     */
+    static createAllManagers(storage: IStorage) {
+        return {
+            nodeManager: this.createNodeManager(storage),
+            edgeManager: this.createEdgeManager(storage),
+            metadataManager: this.createMetadataManager(storage),
+            searchManager: this.createSearchManager(storage),
+            transactionManager: this.createTransactionManager(storage)
+        };
+    }
+
+    /**
+     * Clears all cached manager instances
+     */
+    static clearInstances(): void {
+        this.instances = {};
     }
 }

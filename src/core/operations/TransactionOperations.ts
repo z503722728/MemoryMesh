@@ -1,6 +1,6 @@
 // src/core/operations/TransactionOperations.ts
 
-import type {ITransactionManager} from '../../types/managers.js';
+import type {ITransactionManager} from '../managers/interfaces/index.js';
 import type {Graph} from '../../types/graph.js';
 import {EventEmitter} from '../events/EventEmitter.js';
 
