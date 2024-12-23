@@ -83,7 +83,7 @@ export class SchemaLoader {
         });
 
         if (schema.additionalProperties !== undefined) {
-            builder.setAdditionalProperties(schema.additionalProperties);
+            builder.allowAdditionalProperties(schema.additionalProperties);
         }
 
         return builder;

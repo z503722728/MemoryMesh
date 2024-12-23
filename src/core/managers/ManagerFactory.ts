@@ -34,7 +34,7 @@ export class ManagerFactory {
     /**
      * Creates or returns an existing instance of NodeManager
      */
-    static createNodeManager(storage: IStorage): INodeManager {
+    static getNodeManager(storage: IStorage): INodeManager {
         if (!this.instances.nodeManager) {
             this.instances.nodeManager = new NodeManager(storage);
         }
@@ -44,7 +44,7 @@ export class ManagerFactory {
     /**
      * Creates or returns an existing instance of EdgeManager
      */
-    static createEdgeManager(storage: IStorage): IEdgeManager {
+    static getEdgeManager(storage: IStorage): IEdgeManager {
         if (!this.instances.edgeManager) {
             this.instances.edgeManager = new EdgeManager(storage);
         }
@@ -54,7 +54,7 @@ export class ManagerFactory {
     /**
      * Creates or returns an existing instance of MetadataManager
      */
-    static createMetadataManager(storage: IStorage): IMetadataManager {
+    static getMetadataManager(storage: IStorage): IMetadataManager {
         if (!this.instances.metadataManager) {
             this.instances.metadataManager = new MetadataManager(storage);
         }
@@ -64,7 +64,7 @@ export class ManagerFactory {
     /**
      * Creates or returns an existing instance of SearchManager
      */
-    static createSearchManager(storage: IStorage): ISearchManager {
+    static getSearchManager(storage: IStorage): ISearchManager {
         if (!this.instances.searchManager) {
             this.instances.searchManager = new SearchManager(storage);
         }
@@ -74,7 +74,7 @@ export class ManagerFactory {
     /**
      * Creates or returns an existing instance of TransactionManager
      */
-    static createTransactionManager(storage: IStorage): ITransactionManager {
+    static getTransactionManager(storage: IStorage): ITransactionManager {
         if (!this.instances.transactionManager) {
             this.instances.transactionManager = new TransactionManager(storage);
         }
@@ -84,13 +84,13 @@ export class ManagerFactory {
     /**
      * Creates all manager instances at once
      */
-    static createAllManagers(storage: IStorage) {
+    static getAllManagers(storage: IStorage) {
         return {
-            nodeManager: this.createNodeManager(storage),
-            edgeManager: this.createEdgeManager(storage),
-            metadataManager: this.createMetadataManager(storage),
-            searchManager: this.createSearchManager(storage),
-            transactionManager: this.createTransactionManager(storage)
+            nodeManager: this.getNodeManager(storage),
+            edgeManager: this.getEdgeManager(storage),
+            metadataManager: this.getMetadataManager(storage),
+            searchManager: this.getSearchManager(storage),
+            transactionManager: this.getTransactionManager(storage)
         };
     }
 

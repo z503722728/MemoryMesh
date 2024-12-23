@@ -17,11 +17,11 @@ export abstract class KnowledgeGraphManagerBase {
 
     protected createManagers() {
         return {
-            nodeManager: ManagerFactory.createNodeManager(this.storage),
-            edgeManager: ManagerFactory.createEdgeManager(this.storage),
-            metadataManager: ManagerFactory.createMetadataManager(this.storage),
-            searchManager: ManagerFactory.createSearchManager(this.storage),
-            transactionManager: ManagerFactory.createTransactionManager(this.storage)
+            nodeManager: ManagerFactory.getNodeManager(this.storage),
+            edgeManager: ManagerFactory.getEdgeManager(this.storage),
+            metadataManager: ManagerFactory.getMetadataManager(this.storage),
+            searchManager: ManagerFactory.getSearchManager(this.storage),
+            transactionManager: ManagerFactory.getTransactionManager(this.storage)
         };
     }
 }

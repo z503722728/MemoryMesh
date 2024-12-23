@@ -7,7 +7,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import {KnowledgeGraphManager} from './core/KnowledgeGraphManager.js';
 import {handleCallToolRequest} from './tools/callToolHandler.js';
-import {tools} from './tools/tools.js';
+import {toolsRegistry} from './tools/registry/toolsRegistry.js';
 import {CONFIG} from './config/config.js';
 import {formatToolError} from "./utils/responseFormatter.js";
 
@@ -24,9 +24,11 @@ const server = new Server({
 
 async function main(): Promise<void> {
     try {
+        await toolsRegistry.initialize(knowledgeGraphManager);
+
         server.setRequestHandler(ListToolsRequestSchema, async () => {
             return {
-                tools: tools.map(tool => ({
+                tools: toolsRegistry.getAllTools().map(tool => ({
                     name: tool.name,
                     description: tool.description,
                     inputSchema: tool.inputSchema
