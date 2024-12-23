@@ -2,7 +2,7 @@
 
 import {ToolHandlerFactory} from './handlers/ToolHandlerFactory.js';
 import {formatToolError} from '../utils/responseFormatter.js';
-import type {KnowledgeGraphManager} from '../types/managers.js';
+import type {KnowledgeGraphManager} from '../core/KnowledgeGraphManager.js';
 import type {ToolResponse} from '../types/tools.js';
 
 interface ToolCallRequest {

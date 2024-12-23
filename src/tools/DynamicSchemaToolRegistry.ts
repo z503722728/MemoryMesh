@@ -6,7 +6,7 @@ import {SchemaLoader} from '../schema/loader/schemaLoader.js';
 import {createSchemaNode, handleSchemaUpdate, handleSchemaDelete} from "../schema/loader/schemaProcessor.js";
 import {CONFIG} from '../config/config.js';
 import {formatToolResponse, formatToolError} from '../utils/responseFormatter.js';
-import type {KnowledgeGraphManager} from '../types/managers.js';
+import type {KnowledgeGraphManager} from '../core/KnowledgeGraphManager.js';
 import type {Tool, SchemaProperty} from '../types/tools.js';
 import type {SchemaBuilder, SchemaConfig} from '../schema/loader/schemaBuilder.js';
 

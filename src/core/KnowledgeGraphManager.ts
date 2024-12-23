@@ -10,9 +10,9 @@ import type {
     GetEdgesResult,
     OpenNodesResult
 } from '../types/index.js';
-import {GraphManager} from "./GraphManager.js";
-import {SearchManager} from "./SearchManager.js";
-import {TransactionManager} from "./TransactionManager.js";
+import {GraphManager} from "./managers/implementations/GraphManager.js";
+import {SearchManager, TransactionManager} from "./managers/implementations/index.js";
+import {JsonLineStorage} from './storage/JsonLineStorage.js';
 
 /**
  * Main facade that coordinates between specialized managers
@@ -22,7 +22,7 @@ export class KnowledgeGraphManager {
     private readonly searchManager: SearchManager;
     private readonly transactionManager: TransactionManager;
 
-    constructor(storage?: IStorage) {
+    constructor(storage: IStorage = new JsonLineStorage()) {
         this.graphManager = new GraphManager(storage);
         this.searchManager = new SearchManager(storage);
         this.transactionManager = new TransactionManager(storage);

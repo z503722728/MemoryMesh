@@ -1,8 +1,8 @@
 // src/core/operations/SearchOperations.ts
 
-import type {ISearchManager} from '../../types/managers.js';
+import type {ISearchManager} from '../managers/interfaces/index.js';
 import type {Graph} from '../../types/graph.js';
-import type {OpenNodesResult} from '../../types/operations.js';
+import type {OpenNodesResult} from '../../types/index.js';
 import {EventEmitter} from '../events/EventEmitter.js';
 
 export class SearchOperations extends EventEmitter {

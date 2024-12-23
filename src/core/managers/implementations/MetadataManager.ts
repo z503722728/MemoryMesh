@@ -1,6 +1,6 @@
 // src/core/managers/implementations/MetadataManager.ts
 
-import {IMetadataManager} from '../interfaces/IMetadataManager.js';
+import {IMetadataManager} from '../interfaces/index.js';
 import type {Metadata} from '../../../types/graph.js';
 import type {MetadataAddition, MetadataResult, MetadataDeletion} from '../../../types/index.js';
 import {ValidationUtils} from '../../utils/ValidationUtils.js';

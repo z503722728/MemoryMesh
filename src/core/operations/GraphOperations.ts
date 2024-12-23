@@ -4,7 +4,7 @@ import type {
     INodeManager,
     IEdgeManager,
     IMetadataManager
-} from '../../types/managers.js';
+} from '../managers/interfaces/index.js';
 import type {
     Node,
     Edge,
@@ -16,7 +16,7 @@ import type {
     MetadataDeletion,
     MetadataResult,
     GetEdgesResult
-} from '../../types/operations.js';
+} from '../../types/index.js';
 import {EventEmitter} from '../events/EventEmitter.js';
 
 export class GraphOperations extends EventEmitter {
