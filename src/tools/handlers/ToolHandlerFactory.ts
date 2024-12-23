@@ -39,12 +39,7 @@ export class ToolHandlerFactory {
             throw new Error('ToolHandlerFactory not initialized');
         }
 
-        // First check if it's a dynamic tool
-        if (toolsRegistry.hasTool(toolName) && toolName.match(/^(add|update|delete)_/)) {
-            return this.dynamicHandler;
-        }
-
-        // Then check static tools
+        // First check static tools
         if (toolName.match(/^(add|update|delete)_(nodes|edges)$/)) {
             return this.graphHandler;
         }
@@ -53,6 +48,11 @@ export class ToolHandlerFactory {
         }
         if (toolName.match(/^(add|delete)_metadata$/)) {
             return this.metadataHandler;
+        }
+
+        // Then check dynamic tools
+        if (toolsRegistry.hasTool(toolName) && toolName.match(/^(add|update|delete)_/)) {
+            return this.dynamicHandler;
         }
 
         throw new Error(`No handler found for tool: ${toolName}`);
