@@ -3,7 +3,7 @@
 import {formatToolResponse, formatToolError} from '../../utils/responseFormatter.js';
 import type {Node, Edge, Graph} from '../../types/graph.js';
 import type {ToolResponse} from '../../types/tools.js';
-import type { KnowledgeGraphManager } from '../../core/KnowledgeGraphManager.js';
+import type {KnowledgeGraphManager} from '../../core/KnowledgeGraphManager.js';
 import type {SchemaConfig} from './schemaBuilder.js';
 
 interface NodeData {
@@ -169,6 +169,7 @@ export async function updateSchemaNode(
         metadata.set(key.toLowerCase(), formattedValue);
     };
 
+    // Process standard metadata fields
     const allSchemaFields = [...metadataConfig.requiredFields, ...metadataConfig.optionalFields];
     for (const field of allSchemaFields) {
         if (updates[field] !== undefined && (!relationships || !relationships[field])) {
@@ -176,16 +177,21 @@ export async function updateSchemaNode(
         }
     }
 
+    // Process relationships if they exist in the schema
     if (relationships) {
         for (const [field, config] of Object.entries(relationships)) {
+            // Only process relationship if it's being updated
             if (updates[field] !== undefined) {
+                // Get all existing edges for this relationship type from this node
                 const existingEdges = currentGraph.edges.filter(edge =>
                     edge.from === currentNode.name &&
                     edge.edgeType === config.edgeType
                 );
 
+                // Only mark edges for removal if they're part of this relationship type
                 edgeChanges.remove.push(...existingEdges);
 
+                // Add new edges
                 const value = updates[field];
                 if (Array.isArray(value)) {
                     value.forEach((target: string) => {
@@ -210,6 +216,7 @@ export async function updateSchemaNode(
         }
     }
 
+    // Process additional fields not defined in schema
     for (const [key, value] of Object.entries(updates)) {
         if (!schemaFields.has(key) && value !== undefined) {
             updateMetadataEntry(key, value);
@@ -237,56 +244,82 @@ export async function handleSchemaUpdate(
     knowledgeGraphManager: KnowledgeGraphManager
 ): Promise<ToolResponse> {
     try {
-        const result = await knowledgeGraphManager.openNodes([updates.name]);
-        const node = result.nodes.find((n: Node) => n.nodeType === nodeType);
+        // Start a transaction to ensure atomic updates
+        await knowledgeGraphManager.beginTransaction();
+
+        // Get the complete current state
+        const fullGraph = await knowledgeGraphManager.readGraph();
+        const node = fullGraph.nodes.find((n: Node) => n.nodeType === nodeType && n.name === updates.name);
 
         if (!node) {
-            throw new Error(`${nodeType} "${updates.name}" not found`);
+            await knowledgeGraphManager.rollback();
+            return formatToolError({
+                operation: 'updateSchema',
+                error: `${nodeType} "${updates.name}" not found`,
+                context: {updates, nodeType},
+                suggestions: ["Verify the node exists", "Check node type matches"]
+            });
         }
 
-        // Get relevant edges
-        let relevantEdges: Edge[] = [];
-        if (schema.relationships && Object.keys(schema.relationships).some(field => updates[field] !== undefined)) {
-            const edgeResult = await knowledgeGraphManager.getEdges({from: updates.name});
-            relevantEdges = edgeResult.edges;
+        try {
+            // Process updates
+            const {metadata, edgeChanges} = await updateSchemaNode(
+                updates,
+                node,
+                schema,
+                fullGraph
+            );
+
+            // Update the node first
+            const updatedNode: Node = {
+                ...node,
+                metadata
+            };
+            await knowledgeGraphManager.updateNodes([updatedNode]);
+
+            // Then handle edges if there are any changes
+            if (edgeChanges.remove.length > 0) {
+                await knowledgeGraphManager.deleteEdges(edgeChanges.remove);
+            }
+
+            if (edgeChanges.add.length > 0) {
+                await knowledgeGraphManager.addEdges(edgeChanges.add);
+            }
+
+            // If everything succeeded, commit the transaction
+            await knowledgeGraphManager.commit();
+
+            return formatToolResponse({
+                data: {
+                    updatedNode,
+                    edgeChanges
+                },
+                actionTaken: `Updated ${nodeType}: ${updatedNode.name}`
+            });
+
+        } catch (error) {
+            // If anything fails, rollback all changes
+            await knowledgeGraphManager.rollback();
+            throw error;
         }
 
-        // Process updates
-        const {metadata, edgeChanges} = await updateSchemaNode(
-            updates,
-            node,
-            schema,
-            {nodes: [node], edges: relevantEdges}
-        );
-
-        // Handle edge changes
-        if (edgeChanges.remove.length > 0) {
-            await knowledgeGraphManager.deleteEdges(edgeChanges.remove);
+    } catch (error) {
+        if (knowledgeGraphManager.isInTransaction()) {
+            await knowledgeGraphManager.rollback();
         }
 
-        if (edgeChanges.add.length > 0) {
-            await knowledgeGraphManager.addEdges(edgeChanges.add);
-        }
-
-        const updatedNode: Node = {
-            ...node,
-            metadata
-        };
-
-        await knowledgeGraphManager.updateNodes([updatedNode]);
-
-        return formatToolResponse({
-            data: {updatedNodes: [updatedNode]},
-            message: `Successfully updated ${nodeType} "${updatedNode.name}"`,
-            actionTaken: `Updated ${nodeType} in the knowledge graph`
-        });
-    } catch (error: Error | unknown) {
-        const message = error instanceof Error ? error.message : 'Unknown error occurred';
         return formatToolError({
-            operation: 'handleSchemaUpdate',
-            error: message,
+            operation: 'updateSchema',
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
             context: {updates, schema, nodeType},
-            suggestions: ["Review the schema definition and the update data format", "Ensure that the node being updated exists"]
+            suggestions: [
+                "Check all required fields are provided",
+                "Verify relationship targets exist"
+            ],
+            recoverySteps: [
+                "Review schema requirements",
+                "Ensure node exists before updating"
+            ]
         });
     }
 }
@@ -301,22 +334,32 @@ export async function handleSchemaDelete(
         const node = graph.nodes.find((n: Node) => n.name === nodeName && n.nodeType === nodeType);
 
         if (!node) {
-            throw new Error(`${nodeType} "${nodeName}" not found`);
+            return formatToolError({
+                operation: 'deleteSchema',
+                error: `${nodeType} "${nodeName}" not found`,
+                context: {nodeName, nodeType},
+                suggestions: ["Verify node name and type"]
+            });
         }
 
         await knowledgeGraphManager.deleteNodes([nodeName]);
 
         return formatToolResponse({
-            message: `Successfully deleted ${nodeType} "${nodeName}"`,
-            actionTaken: `Deleted ${nodeType} from the knowledge graph`
+            actionTaken: `Deleted ${nodeType}: ${nodeName}`
         });
-    } catch (error: Error | unknown) {
-        const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    } catch (error) {
         return formatToolError({
-            operation: 'handleSchemaDelete',
-            error: message,
+            operation: 'deleteSchema',
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
             context: {nodeName, nodeType},
-            suggestions: ["Ensure that the node being deleted exists"]
+            suggestions: [
+                "Check node exists",
+                "Verify delete permissions"
+            ],
+            recoverySteps: [
+                "Ensure no dependent nodes exist",
+                "Try retrieving node first"
+            ]
         });
     }
 }

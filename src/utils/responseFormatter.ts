@@ -6,7 +6,7 @@ import type {
     ToolResponseOptions,
     ToolErrorOptions,
     PartialSuccessOptions
-} from '../types/tools.ts';
+} from '../types/tools.js';
 
 /**
  * Formats successful tool responses in a consistent, AI-friendly way.
@@ -39,7 +39,7 @@ export function formatToolResponse<T = any>({
 }
 
 /**
- * Formats error responses with detailed context for AI understanding.
+ * Formats error responses in a consistent, AI-friendly way.
  */
 export function formatToolError({
                                     operation,
@@ -66,59 +66,6 @@ export function formatToolError({
     }
 
     return {toolResult};
-}
-
-/**
- * Validates tool input parameters against a schema with helpful feedback.
- */
-export function validateToolInput(params: Record<string, any>, schema: any) {
-    const validationResult = {
-        isValid: true,
-        content: [] as Array<{ type: string; text: string }>
-    };
-
-    // Required fields check
-    schema.required?.forEach((field: string) => {
-        if (!(field in params)) {
-            validationResult.isValid = false;
-            validationResult.content.push({type: "text", text: `Missing required field: ${field}`});
-        }
-    });
-
-    // Type validation
-    Object.entries(schema.properties).forEach(([field, config]: [string, any]) => {
-        if (field in params) {
-            const value = params[field];
-            if (config.type === 'object' && config.properties) {
-                const nestedValidation = validateToolInput(value, config);
-                if (!nestedValidation.isValid) {
-                    validationResult.isValid = false;
-                    validationResult.content.push(...nestedValidation.content.map(item => ({
-                        ...item,
-                        text: `${field}.${item.text}`
-                    })));
-                }
-            } else if (config.type === 'array' && config.items && config.items.type === 'object' && config.items.properties) {
-                if (!Array.isArray(value)) {
-                    validationResult.isValid = false;
-                    validationResult.content.push({type: "text", text: `${field} must be an array`});
-                } else {
-                    value.forEach((item, index) => {
-                        const nestedValidation = validateToolInput(item, config.items);
-                        if (!nestedValidation.isValid) {
-                            validationResult.isValid = false;
-                            validationResult.content.push(...nestedValidation.content.map(item => ({
-                                ...item,
-                                text: `${field}[${index}].${item.text}`
-                            })));
-                        }
-                    });
-                }
-            }
-        }
-    });
-
-    return validationResult;
 }
 
 /**

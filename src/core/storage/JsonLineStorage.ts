@@ -79,12 +79,9 @@ export class JsonLineStorage implements IStorage {
                 try {
                     const item = JSON.parse(line);
                     if (item.type === "node") {
-                        graph.nodes.push(item as Node);
-                    }
-                    if (item.type === "edge") {
-                        const edge = item as Edge;
-                        graph.edges.push(edge);
-                        this.indexEdge(edge);
+                        graph.nodes.push(item);
+                    } else if (item.type === "edge") {
+                        graph.edges.push(item);
                     }
                 } catch (parseError) {
                     console.error('Error parsing line:', line, parseError);
@@ -108,13 +105,14 @@ export class JsonLineStorage implements IStorage {
 
         const MEMORY_FILE_PATH = CONFIG.PATHS.MEMORY_FILE;
 
-        // Clear and rebuild indices
-        this.clearIndices();
-        graph.edges.forEach(edge => this.indexEdge(edge));
+        const processedEdges = graph.edges.map(edge => ({
+            ...edge,
+            type: 'edge'
+        }));
 
         const lines = [
-            ...graph.nodes.map(node => JSON.stringify(node)),
-            ...graph.edges.map(edge => JSON.stringify(edge)),
+            ...graph.nodes.map(node => JSON.stringify({...node, type: 'node'})),
+            ...processedEdges.map(edge => JSON.stringify(edge))
         ];
 
         await fs.writeFile(MEMORY_FILE_PATH, lines.join("\n") + (lines.length > 0 ? "\n" : ""));

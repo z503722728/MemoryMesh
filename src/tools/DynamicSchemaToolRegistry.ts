@@ -139,7 +139,7 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
             return formatToolError({
                 operation: toolName,
                 error: `Invalid tool name format: ${toolName}`,
-                suggestions: ["Ensure tool name follows 'add|update|delete_<schemaName>' format"]
+                suggestions: ["Tool name must follow pattern: 'add|update|delete_<schemaName>'"]
             });
         }
 
@@ -149,8 +149,9 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
         if (!schemaBuilder) {
             return formatToolError({
                 operation: toolName,
-                error: `Schema not found for: ${schemaName}`,
-                suggestions: [`Verify that a schema named '${schemaName}' exists`]
+                error: `Schema not found: ${schemaName}`,
+                context: {availableSchemas: Array.from(this.schemas.keys())},
+                suggestions: ["Verify schema name exists"]
             });
         }
 
@@ -163,7 +164,7 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
                     const existingNodes = await knowledgeGraphManager.openNodes([nodeData.name]);
 
                     if (existingNodes.nodes.length > 0) {
-                        throw new Error(`Node already exists: ${nodeData.name}. Consider updating existing node.`);
+                        throw new Error(`Node already exists: ${nodeData.name}`);
                     }
 
                     const {nodes, edges} = await createSchemaNode(nodeData, schema, schemaName);
@@ -178,8 +179,7 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
 
                         return formatToolResponse({
                             data: {nodes, edges},
-                            message: `Successfully created ${schemaName} "${nodeData.name}"`,
-                            actionTaken: `Created ${schemaName} in the knowledge graph`
+                            actionTaken: `Created ${schemaName}: ${nodeData.name}`
                         });
                     } catch (error) {
                         await knowledgeGraphManager.rollback();
@@ -202,7 +202,7 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
                         return formatToolError({
                             operation: toolName,
                             error: `Name is required to delete a ${schemaName}`,
-                            suggestions: [`Provide the 'name' of the ${schemaName} to delete`]
+                            suggestions: ["Provide the 'name' parameter"]
                         });
                     }
                     return handleSchemaDelete(name, schemaName, knowledgeGraphManager);
@@ -212,7 +212,7 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
                     return formatToolError({
                         operation: toolName,
                         error: `Unknown operation: ${operation}`,
-                        suggestions: ["Supported operations are 'add', 'update', and 'delete'"]
+                        suggestions: ["Use 'add', 'update', or 'delete'"]
                     });
             }
         } catch (error) {
@@ -220,7 +220,14 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
                 operation: toolName,
                 error: error instanceof Error ? error.message : 'Unknown error occurred',
                 context: {args},
-                suggestions: ["Review the error message and the provided arguments"]
+                suggestions: [
+                    "Check input parameters against schema",
+                    "Verify entity existence for updates/deletes"
+                ],
+                recoverySteps: [
+                    "Review schema requirements",
+                    "Ensure all required fields are provided"
+                ]
             });
         }
     }

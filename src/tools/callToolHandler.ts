@@ -24,15 +24,23 @@ export async function handleCallToolRequest(
         const {name, arguments: args} = request.params;
 
         if (!args) {
-            throw new Error("Tool arguments are required");
+            return formatToolError({
+                operation: name,
+                error: "Tool arguments are required",
+                suggestions: ["Provide required arguments for the tool"]
+            });
         }
 
         // Ensure tools registry is initialized
         if (!toolsRegistry.hasTool(name)) {
             return formatToolError({
-                operation: "callTool",
+                operation: name,
                 error: `Tool not found: ${name}`,
-                suggestions: ["Verify the tool name is correct", "Check if the tool is registered"]
+                context: {
+                    availableTools: toolsRegistry.getAllTools().map(t => t.name)
+                },
+                suggestions: ["Verify tool name is correct"],
+                recoverySteps: ["Check available tools list"]
             });
         }
 
@@ -46,16 +54,18 @@ export async function handleCallToolRequest(
         return await handler.handleTool(name, args);
 
     } catch (error) {
-        console.error("Error in handleCallToolRequest:", error);
         return formatToolError({
             operation: "callTool",
             error: error instanceof Error ? error.message : 'Unknown error occurred',
             context: {request},
             suggestions: [
-                "Examine the tool input parameters for correctness",
-                "Verify that the requested operation is supported"
+                "Verify tool name and arguments",
+                "Check tool handler initialization"
             ],
-            recoverySteps: ["Adjust the input parameters based on the schema definition"]
+            recoverySteps: [
+                "Review tool documentation",
+                "Ensure all required arguments are provided"
+            ]
         });
     }
 }
