@@ -19,6 +19,8 @@ export interface SchemaProperty {
     properties?: Record<string, SchemaProperty>;
     required?: string[];
     enum?: string[];
+    minimum?: number;
+    maximum?: number;
 }
 
 /**

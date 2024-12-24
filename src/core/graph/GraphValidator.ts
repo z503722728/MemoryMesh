@@ -3,6 +3,7 @@
 import type {Graph} from './Graph.js';
 import type {Node} from './Node.js';
 import type {Edge} from './Edge.js';
+import {EdgeWeightUtils} from './EdgeWeightUtils.js';
 
 /**
  * Provides validation methods for graph operations
@@ -87,6 +88,9 @@ export class GraphValidator {
         }
         if (!edge.edgeType) {
             throw new Error("Edge must have an 'edgeType' property");
+        }
+        if (edge.weight !== undefined) {
+            EdgeWeightUtils.validateWeight(edge.weight);
         }
     }
 

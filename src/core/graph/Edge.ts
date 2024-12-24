@@ -8,4 +8,5 @@ export interface Edge {
     from: string;
     to: string;
     edgeType: string;
+    weight?: number; // Optional weight property (0-1 range)
 }
