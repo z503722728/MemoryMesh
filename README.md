@@ -1,5 +1,5 @@
 # MemoryMesh
-
+[![Release](https://img.shields.io/badge/Release-v0.2.8-blue.svg)](./CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![smithery badge](https://smithery.ai/badge/memorymesh)](https://smithery.ai/protocol/memorymesh)
 
