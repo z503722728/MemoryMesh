@@ -1,7 +1,9 @@
 # MemoryMesh
 [![Release](https://img.shields.io/badge/Release-v0.2.8-blue.svg)](./CHANGELOG.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![smithery badge](https://smithery.ai/badge/memorymesh)](https://smithery.ai/protocol/memorymesh)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC.svg?logo=typescript&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![GitHub Stars](https://img.shields.io/github/stars/CheMiguel23/MemoryMesh.svg?style=social)
 
 MemoryMesh is a knowledge graph server designed for AI models, with a focus on text-based RPGs and interactive storytelling. It helps AI maintain consistent, structured memory across conversations, enabling richer and more dynamic interactions.
 
