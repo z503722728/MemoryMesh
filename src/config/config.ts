@@ -31,7 +31,7 @@ interface Config {
 export const CONFIG: Config = {
     SERVER: {
         NAME: 'memorymesh',
-        VERSION: '0.2.7',
+        VERSION: '0.2.8',
     },
 
     PATHS: {
