@@ -7,14 +7,6 @@ MemoryMesh is a knowledge graph server designed for AI models, with a focus on t
 
 *The project is based on the [Knowledge Graph Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) from the MCP servers repository and retains its core functionality.*
 
-## Why MemoryMesh?
-
-* **AI-First Design**: Tools and schemas specifically crafted for AI interaction
-* **Dynamic & Flexible**: Automatically generates tools from your schema definitions
-* **RPG-Ready**: Comes with 11 pre-built schemas for gaming scenarios
-* **Visual Schema Management:** Includes a Schema Manager tool for easy creation and configuration of schemas.
-* **Memory Visualization:** Offers a Memory Viewer tool to help you understand and explore the knowledge graph.
-
 ## IMPORTANT
 Since `v0.2.7` the default location of schemas was changed to `dist/data/schemas`.
 This location is not expected to change in the future, but if you are updating from a previous version, make sure to move your schema files to the new location.
@@ -211,38 +203,9 @@ You are a helpful AI assistant managing a knowledge graph for a text-based RPG. 
 
 When the user provides input, first process it using your available tools to update the knowledge graph. Then, respond in a way that is appropriate for a text-based RPG.
 ```
-Trivial Example Interactions:
 
-```
-User: "Start a new game. I want to play a human ranger named Aragorn."
+You can also instruct the AI to perform specific actions directly in the chat.
 
-(AI - behind the scenes): Use add_player_character to create a node for Aragorn with the appropriate metadata.
-
-(AI - response): "You begin your adventure as Aragorn, a skilled human ranger. What is your first move?"
-
-User: "Create a new city called 'Minas Tirith'."
-
-(AI - behind the scenes): Use add_city to create a node for Minas Tirith.
-
-(AI - response): "The great city of Minas Tirith has been added to the world. It is known for..."
-
-User: "Aragorn is now in Minas Tirith."
-
-(AI - behind the scenes): Use update_player_character to update Aragorn's currentLocation to Minas Tirith.
-
-(AI - response): "Aragorn has arrived in Minas Tirith. What would you like to do here?"
-```
-
-You can also instruct the AI to perform specific actions directly in the chat, such as:
-```
-"Give the player an artifact called the 'One Ring'."
-```
-```
-"Make the NPC 'Gandalf' a wizard."
-```
-```
-"Update the memory with the latest events." (Useful before switching to a new chat)
-```
 Experiment with different prompts to find what works best for your use case!
 
 ### Example
