@@ -38,6 +38,7 @@ Nodes represent entities or concepts within the knowledge graph. Each node has:
 * `name`: A unique identifier.
 * `nodeType`: The type of the node (e.g., `npc`, `artifact`, `location`), defined by your schemas.
 * `metadata`: An array of strings providing descriptive details about the node.
+* `weight`: (Optional) A numerical value between 0 and 1 representing the strength of the relationship, defaulting to 1.
 
 **Example Node:**
 

@@ -12,6 +12,7 @@ export interface EdgeUpdate {
     newFrom?: string;
     newTo?: string;
     newEdgeType?: string;
+    newWeight?: number;
 }
 
 /**

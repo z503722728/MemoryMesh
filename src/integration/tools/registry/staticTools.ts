@@ -80,6 +80,12 @@ export const graphTools: Tool[] = [
                             from: {type: "string", description: "The name of the node where the edge starts"},
                             to: {type: "string", description: "The name of the node where the edge ends"},
                             edgeType: {type: "string", description: "The type of the edge"},
+                            weight: {
+                                type: "number",
+                                description: "Optional edge weight (0-1 range). Defaults to 1 if not specified",
+                                minimum: 0,
+                                maximum: 1
+                            }
                         },
                         required: ["from", "to", "edgeType"],
                     },
@@ -108,6 +114,12 @@ export const graphTools: Tool[] = [
                             newFrom: {type: "string", description: "New source node name"},
                             newTo: {type: "string", description: "New target node name"},
                             newEdgeType: {type: "string", description: "New edge type"},
+                            newWeight: {
+                                type: "number",
+                                description: "Optional new edge weight (0-1 range)",
+                                minimum: 0,
+                                maximum: 1
+                            }
                         },
                         required: ["from", "to", "edgeType"],
                     },

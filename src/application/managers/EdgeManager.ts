@@ -1,7 +1,7 @@
 // src/application/managers/EdgeManager.ts
 
 import {IEdgeManager} from '@application/managers/interfaces/IEdgeManager.js';
-import {GraphValidator} from '@core/index.js';
+import {GraphValidator, EdgeWeightUtils} from '@core/index.js';
 import type {Edge} from '@core/index.js';
 import type {EdgeUpdate, EdgeFilter} from '@shared/index.js';
 
@@ -22,7 +22,8 @@ export class EdgeManager extends IEdgeManager {
             // Validate edge uniqueness and node existence using GraphValidator
             const newEdges = edges.filter(edge => {
                 GraphValidator.validateEdgeUniqueness(graph, edge);
-                return true;
+                // Ensure weights are set
+                return EdgeWeightUtils.ensureWeight(edge);
             });
 
             if (newEdges.length === 0) {
@@ -78,8 +79,14 @@ export class EdgeManager extends IEdgeManager {
                     type: 'edge',
                     from: updateEdge.newFrom || graph.edges[edgeIndex].from,
                     to: updateEdge.newTo || graph.edges[edgeIndex].to,
-                    edgeType: updateEdge.newEdgeType || graph.edges[edgeIndex].edgeType
+                    edgeType: updateEdge.newEdgeType || graph.edges[edgeIndex].edgeType,
+                    weight: updateEdge.newWeight !== undefined ? updateEdge.newWeight : graph.edges[edgeIndex].weight
                 };
+
+                // Validate the new weight if it's being updated
+                if (updatedEdge.weight !== undefined) {
+                    EdgeWeightUtils.validateWeight(updatedEdge.weight);
+                }
 
                 graph.edges[edgeIndex] = updatedEdge;
                 updatedEdges.push(updatedEdge);
