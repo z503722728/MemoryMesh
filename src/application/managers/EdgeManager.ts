@@ -1,7 +1,7 @@
 // src/application/managers/EdgeManager.ts
 
 import {IEdgeManager} from '@application/managers/interfaces/IEdgeManager.js';
-import {ValidationUtils} from '@shared/index.js';
+import {GraphValidator} from '@core/index.js';
 import type {Edge} from '@core/index.js';
 import type {EdgeUpdate, EdgeFilter} from '@shared/index.js';
 
@@ -19,9 +19,9 @@ export class EdgeManager extends IEdgeManager {
 
             const graph = await this.storage.loadGraph();
 
-            // Validate edge uniqueness and node existence using ValidationUtils
+            // Validate edge uniqueness and node existence using GraphValidator
             const newEdges = edges.filter(edge => {
-                ValidationUtils.validateEdgeUniqueness(graph, edge);
+                GraphValidator.validateEdgeUniqueness(graph, edge);
                 return true;
             });
 
@@ -30,8 +30,8 @@ export class EdgeManager extends IEdgeManager {
             }
 
             for (const edge of newEdges) {
-                ValidationUtils.validateNodeExists(graph, edge.from);
-                ValidationUtils.validateNodeExists(graph, edge.to);
+                GraphValidator.validateNodeExists(graph, edge.from);
+                GraphValidator.validateNodeExists(graph, edge.to);
             }
 
             graph.edges.push(...newEdges);
@@ -66,12 +66,12 @@ export class EdgeManager extends IEdgeManager {
                     throw new Error(`Edge not found: ${updateEdge.from} -> ${updateEdge.to} (${updateEdge.edgeType})`);
                 }
 
-                // Validate node existence for updated nodes using ValidationUtils
+                // Validate node existence for updated nodes using GraphValidator
                 if (updateEdge.newFrom) {
-                    ValidationUtils.validateNodeExists(graph, updateEdge.newFrom);
+                    GraphValidator.validateNodeExists(graph, updateEdge.newFrom);
                 }
                 if (updateEdge.newTo) {
-                    ValidationUtils.validateNodeExists(graph, updateEdge.newTo);
+                    GraphValidator.validateNodeExists(graph, updateEdge.newTo);
                 }
 
                 const updatedEdge: Edge = {

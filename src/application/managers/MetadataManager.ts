@@ -2,7 +2,7 @@
 
 import {IMetadataManager} from './interfaces/IMetadataManager.js';
 import {IManager} from './interfaces/IManager.js';
-import {ValidationUtils} from '@shared/index.js';
+import {GraphValidator} from '@core/index.js';
 import type {Metadata, MetadataAddition, MetadataResult, MetadataDeletion} from '@core/index.js';
 
 /**
@@ -21,7 +21,7 @@ export class MetadataManager extends IManager implements IMetadataManager {
             const results: MetadataResult[] = [];
 
             for (const item of metadata) {
-                ValidationUtils.validateNodeExists(graph, item.nodeName);
+                GraphValidator.validateNodeExists(graph, item.nodeName);
                 const node = graph.nodes.find(e => e.name === item.nodeName);
 
                 if (!Array.isArray(node!.metadata)) {
@@ -60,7 +60,7 @@ export class MetadataManager extends IManager implements IMetadataManager {
             let deletedCount = 0;
 
             for (const deletion of deletions) {
-                ValidationUtils.validateNodeExists(graph, deletion.nodeName);
+                GraphValidator.validateNodeExists(graph, deletion.nodeName);
                 const node = graph.nodes.find(e => e.name === deletion.nodeName);
 
                 if (node) {
@@ -87,7 +87,7 @@ export class MetadataManager extends IManager implements IMetadataManager {
     async getMetadata(nodeName: string): Promise<Metadata> {
         try {
             const graph = await this.storage.loadGraph();
-            ValidationUtils.validateNodeExists(graph, nodeName);
+            GraphValidator.validateNodeExists(graph, nodeName);
             const node = graph.nodes.find(e => e.name === nodeName);
 
             return node!.metadata || [];

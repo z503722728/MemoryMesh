@@ -2,7 +2,7 @@
 
 import {IManager} from './interfaces/IManager.js';
 import {INodeManager} from './interfaces/INodeManager.js';
-import {ValidationUtils} from '@shared/index.js';
+import {GraphValidator} from '@core/index.js';
 import type {Node} from '@core/index.js';
 
 /**
@@ -21,8 +21,8 @@ export class NodeManager extends IManager implements INodeManager {
             const newNodes: Node[] = [];
 
             for (const node of nodes) {
-                ValidationUtils.validateNodeProperties(node);
-                ValidationUtils.validateNodeDoesNotExist(graph, node.name);
+                GraphValidator.validateNodeProperties(node);
+                GraphValidator.validateNodeDoesNotExist(graph, node.name);
                 newNodes.push(node);
             }
 
@@ -48,7 +48,7 @@ export class NodeManager extends IManager implements INodeManager {
             const updatedNodes: Node[] = [];
 
             for (const updateNode of nodes) {
-                ValidationUtils.validateNodeNameProperty(updateNode);
+                GraphValidator.validateNodeNameProperty(updateNode);
                 const nodeIndex = graph.nodes.findIndex(n => n.name === updateNode.name);
 
                 if (nodeIndex === -1) {
@@ -77,7 +77,7 @@ export class NodeManager extends IManager implements INodeManager {
      */
     async deleteNodes(nodeNames: string[]): Promise<void> {
         try {
-            ValidationUtils.validateNodeNamesArray(nodeNames);
+            GraphValidator.validateNodeNamesArray(nodeNames);
             this.emit('beforeDeleteNodes', {nodeNames});
 
             const graph = await this.storage.loadGraph();
