@@ -17,6 +17,7 @@ MemoryMesh is a knowledge graph server designed for AI models, with a focus on t
 
 ## IMPORTANT
 Since `v0.2.7` the default location of schemas was changed to `dist/data/schemas`.
+This location is not expected to change in the future, but if you are updating from a previous version, make sure to move your schema files to the new location.
 
 ## Quick Links
 
