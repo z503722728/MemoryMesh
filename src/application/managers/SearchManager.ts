@@ -1,4 +1,4 @@
-// src/core/managers/implementations/SearchManager.ts
+// src/application/managers/SearchManager.ts
 
 import {ISearchManager} from './interfaces/ISearchManager.js';
 import {IManager} from './interfaces/IManager.js';
@@ -11,14 +11,16 @@ import type {Graph} from '@core/index.js';
 export class SearchManager extends IManager implements ISearchManager {
     /**
      * Searches for nodes in the knowledge graph based on a query.
-     * Matches against node names, types, and metadata content.
+     * Includes both matching nodes and their immediate neighbors.
      */
     async searchNodes(query: string): Promise<Graph> {
         try {
             this.emit('beforeSearch', {query});
 
             const graph = await this.storage.loadGraph();
-            const filteredNodes = graph.nodes.filter(node =>
+
+            // Find directly matching nodes
+            const matchingNodes = graph.nodes.filter(node =>
                 node.name.toLowerCase().includes(query.toLowerCase()) ||
                 node.nodeType.toLowerCase().includes(query.toLowerCase()) ||
                 node.metadata.some(meta =>
@@ -26,14 +28,36 @@ export class SearchManager extends IManager implements ISearchManager {
                 )
             );
 
-            const filteredNodeNames = new Set(filteredNodes.map(node => node.name));
-            const filteredEdges = graph.edges.filter(edge =>
-                filteredNodeNames.has(edge.from) && filteredNodeNames.has(edge.to)
+            // Get names of matching nodes for efficient lookup
+            const matchingNodeNames = new Set(matchingNodes.map(node => node.name));
+
+            // Find all edges connected to matching nodes
+            const connectedEdges = graph.edges.filter(edge =>
+                matchingNodeNames.has(edge.from) || matchingNodeNames.has(edge.to)
             );
 
+            // Get names of all neighbor nodes from the edges
+            const neighborNodeNames = new Set<string>();
+            connectedEdges.forEach(edge => {
+                if (matchingNodeNames.has(edge.from)) {
+                    neighborNodeNames.add(edge.to);
+                }
+                if (matchingNodeNames.has(edge.to)) {
+                    neighborNodeNames.add(edge.from);
+                }
+            });
+
+            // Get all neighbor nodes
+            const neighborNodes = graph.nodes.filter(node =>
+                !matchingNodeNames.has(node.name) && neighborNodeNames.has(node.name)
+            );
+
+            // Combine matching nodes and their neighbors
+            const resultNodes = [...matchingNodes, ...neighborNodes];
+
             const result: Graph = {
-                nodes: filteredNodes,
-                edges: filteredEdges
+                nodes: resultNodes,
+                edges: connectedEdges
             };
 
             this.emit('afterSearch', result);
@@ -45,25 +69,49 @@ export class SearchManager extends IManager implements ISearchManager {
     }
 
     /**
-     * Retrieves specific nodes and their related edges from the knowledge graph.
+     * Retrieves specific nodes and their immediate neighbors from the knowledge graph.
      */
     async openNodes(names: string[]): Promise<Graph> {
         try {
             this.emit('beforeOpenNodes', {names});
 
             const graph = await this.storage.loadGraph();
-            const filteredNodes = graph.nodes.filter(node =>
+
+            // Get the requested nodes
+            const requestedNodes = graph.nodes.filter(node =>
                 names.includes(node.name)
             );
 
-            const filteredNodeNames = new Set(filteredNodes.map(node => node.name));
-            const filteredEdges = graph.edges.filter(edge =>
-                filteredNodeNames.has(edge.from) && filteredNodeNames.has(edge.to)
+            // Get names of requested nodes for efficient lookup
+            const requestedNodeNames = new Set(requestedNodes.map(node => node.name));
+
+            // Find all edges connected to requested nodes
+            const connectedEdges = graph.edges.filter(edge =>
+                requestedNodeNames.has(edge.from) || requestedNodeNames.has(edge.to)
             );
 
+            // Get names of all neighbor nodes from the edges
+            const neighborNodeNames = new Set<string>();
+            connectedEdges.forEach(edge => {
+                if (requestedNodeNames.has(edge.from)) {
+                    neighborNodeNames.add(edge.to);
+                }
+                if (requestedNodeNames.has(edge.to)) {
+                    neighborNodeNames.add(edge.from);
+                }
+            });
+
+            // Get all neighbor nodes
+            const neighborNodes = graph.nodes.filter(node =>
+                !requestedNodeNames.has(node.name) && neighborNodeNames.has(node.name)
+            );
+
+            // Combine requested nodes and their neighbors
+            const resultNodes = [...requestedNodes, ...neighborNodes];
+
             const result: Graph = {
-                nodes: filteredNodes,
-                edges: filteredEdges
+                nodes: resultNodes,
+                edges: connectedEdges
             };
 
             this.emit('afterOpenNodes', result);
