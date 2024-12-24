@@ -1,6 +1,6 @@
 {
   "name": "memorymesh",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "An MCP server that uses a knowledge graph to store and recall structured memory for AI models",
   "license": "MIT",
   "author": "CheMiguel23",
@@ -15,11 +15,11 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc && shx chmod +x dist/*.js && copyfiles -u 1 src/config/schemas/*.json src/data/*.json dist/",
+    "build": "tsc && tsc-alias && shx chmod +x dist/*.js && copyfiles -u 1 src/data/schemas/*.json src/data/*.json dist/",
     "prepare": "npm run build",
     "watch": "tsc --watch",
-    "start": "ts-node src/index.ts",
-    "start:claude": "ts-node src/index.ts",
+    "start": "ts-node --esm src/index.ts",
+    "start:claude": "ts-node --esm src/index.ts",
     "start:prod": "node dist/index.js"
   },
   "dependencies": {
@@ -30,6 +30,7 @@
     "copyfiles": "^2.4.1",
     "shx": "^0.3.4",
     "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.8",
     "typescript": "^5.3.3"
   }
 }

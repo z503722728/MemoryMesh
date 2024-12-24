@@ -14,7 +14,31 @@
     "allowJs": true,
     "checkJs": false,
     "declaration": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": "src",
+    "paths": {
+      "@core/*": [
+        "core/*"
+      ],
+      "@infrastructure/*": [
+        "infrastructure/*"
+      ],
+      "@application/*": [
+        "application/*"
+      ],
+      "@integration/*": [
+        "integration/*"
+      ],
+      "@shared/*": [
+        "shared/*"
+      ],
+      "@data/*": [
+        "data/*"
+      ],
+      "@config/*": [
+        "config/*"
+      ]
+    }
   },
   "include": [
     "src/**/*"
