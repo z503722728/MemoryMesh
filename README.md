@@ -1,6 +1,3 @@
-# IMPORTANT
-Since v0.2.7 the default location of schemas was changed to `dist/data/schemas`.
-
 # MemoryMesh
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -17,6 +14,9 @@ MemoryMesh is a knowledge graph server designed for AI models, with a focus on t
 * **RPG-Ready**: Comes with 11 pre-built schemas for gaming scenarios
 * **Visual Schema Management:** Includes a Schema Manager tool for easy creation and configuration of schemas.
 * **Memory Visualization:** Offers a Memory Viewer tool to help you understand and explore the knowledge graph.
+
+## IMPORTANT
+Since `v0.2.7` the default location of schemas was changed to `dist/data/schemas`.
 
 ## Quick Links
 
@@ -325,6 +325,9 @@ Experiment with different prompts to find what works best for your use case!
 3. Look for the MCP plugin icon <img src="https://mintlify.s3.us-west-1.amazonaws.com/mcp/images/claude-desktop-mcp-plug-icon.svg"/> in the top-right corner. If it's there, your configuration is likely correct.
 4. Click the <img src="https://mintlify.s3.us-west-1.amazonaws.com/mcp/images/claude-desktop-mcp-plug-icon.svg"/> icon. You should see "memorymesh" in the list of connected servers.
 5. Click the <img src="https://mintlify.s3.us-west-1.amazonaws.com/mcp/images/claude-desktop-mcp-hammer-icon.svg"/> icon. If you see tools listed (e.g., `add_npc`, `update_npc`, etc.), your server is working and exposing tools correctly.
+
+### Updating
+Before updates, make sure to back up your `dist/data` directory to avoid losing your memory data.
 
 ### Troubleshooting
 
