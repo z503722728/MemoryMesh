@@ -5,13 +5,13 @@ import {
     CallToolRequestSchema,
     ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import {KnowledgeGraphManager} from './core/KnowledgeGraphManager.js';
-import {handleCallToolRequest} from './tools/callToolHandler.js';
-import {toolsRegistry} from './tools/registry/toolsRegistry.js';
+import {ApplicationManager} from '@application/managers/ApplicationManager.js';
+import {handleCallToolRequest} from '@integration/tools/callToolHandler.js';
+import {toolsRegistry} from '@integration/tools/registry/toolsRegistry.js';
 import {CONFIG} from './config/config.js';
-import {formatToolError} from "./utils/responseFormatter.js";
+import {formatToolError} from "@shared/utils/responseFormatter.js";
 
-const knowledgeGraphManager = new KnowledgeGraphManager();
+const knowledgeGraphManager = new ApplicationManager();
 
 const server = new Server({
     name: CONFIG.SERVER.NAME,

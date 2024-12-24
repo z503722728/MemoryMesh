@@ -15,6 +15,10 @@ MemoryMesh is a knowledge graph server designed for AI models, with a focus on t
 * **Visual Schema Management:** Includes a Schema Manager tool for easy creation and configuration of schemas.
 * **Memory Visualization:** Offers a Memory Viewer tool to help you understand and explore the knowledge graph.
 
+## IMPORTANT
+Since `v0.2.7` the default location of schemas was changed to `dist/data/schemas`.
+This location is not expected to change in the future, but if you are updating from a previous version, make sure to move your schema files to the new location.
+
 ## Quick Links
 
 *   [Installation](#installation)
@@ -80,7 +84,7 @@ Schemas are the heart of MemoryMesh. They define the structure of your data and 
 
 ##### Schema File Location
 
-Place your schema files (`.schema.json`) in the `dist/config/schemas` directory of your built MemoryMesh project. MemoryMesh will automatically detect and process these files on startup.
+Place your schema files (`.schema.json`) in the `dist/data/schemas` directory of your built MemoryMesh project. MemoryMesh will automatically detect and process these files on startup.
 
 ##### Schema Structure
 
@@ -191,7 +195,7 @@ The Memory Viewer is a standalone web application. [Memory Viewer discussion](ht
 
 ##### Using the Memory Viewer
 * Select Memory File: In the Memory Viewer, click the "Select Memory File" button.
-* Choose File: Navigate to your MemoryMesh project directory and select the memory.json file (usually located in dist/data/memory.json).
+* Choose File: Navigate to your MemoryMesh project directory and select the `memory.json` file (located in `dist/data/memory.json` by default).
 * Explore: The Memory Viewer will load and display the contents of your knowledge graph.
 
 ## Memory Flow
@@ -281,8 +285,8 @@ Experiment with different prompts to find what works best for your use case!
 
 4. **Verify File Copy (Optional):**
 
-    *   The build process should automatically copy the `config` and `data` folders to `dist`.
-    *   **Check** that `dist/config` and `dist/data` exist and contain `.json` files.
+    *   The build process should automatically copy the `data` folder to `dist`.
+    *   **Check** that `dist/data` exists and contains `.json` files. Also verify that `dist/data/schemas` exists and contains `.schema.json` files.
 
 5. **Configure Claude Desktop:**
 
@@ -323,6 +327,9 @@ Experiment with different prompts to find what works best for your use case!
 4. Click the <img src="https://mintlify.s3.us-west-1.amazonaws.com/mcp/images/claude-desktop-mcp-plug-icon.svg"/> icon. You should see "memorymesh" in the list of connected servers.
 5. Click the <img src="https://mintlify.s3.us-west-1.amazonaws.com/mcp/images/claude-desktop-mcp-hammer-icon.svg"/> icon. If you see tools listed (e.g., `add_npc`, `update_npc`, etc.), your server is working and exposing tools correctly.
 
+### Updating
+Before updates, make sure to back up your `dist/data` directory to avoid losing your memory data.
+
 ### Troubleshooting
 
 *   **Server not appearing in Claude:**
@@ -334,7 +341,7 @@ Experiment with different prompts to find what works best for your use case!
 
 *   **Tools not showing up:**
     *   Make sure your `npm run build` command completed without errors.
-    *   Verify that your schema files are correctly placed in `dist/config/schemas` and follow the correct naming convention (`add_[entity].schema.json`).
+    *   Verify that your schema files are correctly placed in `dist/data/schemas` and follow the correct naming convention (`add_[entity].schema.json`).
     *   Check your server's console output or logs for any errors during initialization.
 
 ### Installing via Smithery
@@ -355,8 +362,8 @@ MemoryMesh offers several ways to customize its behavior beyond the basic setup:
 
 ### Variables
 You can override default settings using in `/config/config.ts`
-* MEMORY_FILE: Specifies the path to the JSON file used for storing the knowledge graph data. (Default: dist/data/memory.json)
-* SCHEMAS_DIR: Path to schema files directory
+* MEMORY_FILE: Specifies the path to the JSON file used for storing the knowledge graph data. (Default: `dist/data/memory.json`)
+* SCHEMAS_DIR: Path to schema files directory. (Default: `dist/data/schemas/memory.json`)
 
 ## Limitations
 

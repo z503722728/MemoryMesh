@@ -41,4 +41,4 @@ coverage/
 src/data/memory.json
 
 # Ignore schema changes
-scrc/config/schemas/*.json
+scr/data/schemas/*.json

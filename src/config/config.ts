@@ -1,7 +1,7 @@
 // src/config/config.ts
 
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -31,12 +31,12 @@ interface Config {
 export const CONFIG: Config = {
     SERVER: {
         NAME: 'memorymesh',
-        VERSION: '0.2.6',
+        VERSION: '0.2.7',
     },
 
     PATHS: {
         /** Path to schema files directory. */
-        SCHEMAS_DIR: path.join(__dirname, '..', 'config', 'schemas'),
+        SCHEMAS_DIR: path.join(__dirname, '..', 'data', 'schemas'),
         /** Path to the memory JSON file. */
         MEMORY_FILE: path.join(__dirname, '..', 'data', 'memory.json'),
     },
