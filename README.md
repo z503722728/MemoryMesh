@@ -9,6 +9,8 @@ MemoryMesh is a knowledge graph server designed for AI models, with a focus on t
 
 *The project is based on the [Knowledge Graph Memory Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) from the MCP servers repository and retains its core functionality.*
 
+<a href="https://glama.ai/mcp/servers/kf6n6221pd"><img width="380" height="200" src="https://glama.ai/mcp/servers/kf6n6221pd/badge" alt="MemoryMesh MCP server" /></a>
+
 ## IMPORTANT
 Since `v0.2.7` the default location of schemas was changed to `dist/data/schemas`.
 This location is not expected to change in the future, but if you are updating from a previous version, make sure to move your schema files to the new location.
@@ -317,11 +319,6 @@ To install MemoryMesh for Claude Desktop automatically via [Smithery](https://sm
 ```bash
 npx @smithery/cli install memorymesh --client claude
 ```
-
-### MemoryMesh on glama.ai
-<a href="https://glama.ai/mcp/servers/kf6n6221pd">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/kf6n6221pd/badge" />
-</a>
 
 ## Advanced Configuration
 MemoryMesh offers several ways to customize its behavior beyond the basic setup:
