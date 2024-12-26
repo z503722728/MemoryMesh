@@ -320,11 +320,6 @@ To install MemoryMesh for Claude Desktop automatically via [Smithery](https://sm
 npx @smithery/cli install memorymesh --client claude
 ```
 
-### MemoryMesh on glama.ai
-<a href="https://glama.ai/mcp/servers/kf6n6221pd">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/kf6n6221pd/badge" />
-</a>
-
 ## Advanced Configuration
 MemoryMesh offers several ways to customize its behavior beyond the basic setup:
 
