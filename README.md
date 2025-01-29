@@ -1,6 +1,6 @@
 # MemoryMesh
 [![Release](https://img.shields.io/badge/Release-v0.2.8-blue.svg)](./CHANGELOG.md)
-[![smithery badge](https://smithery.ai/badge/memorymesh)](https://smithery.ai/protocol/memorymesh)
+[![smithery badge](https://smithery.ai/badge/memorymesh)](https://smithery.ai/server/memorymesh)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC.svg?logo=typescript&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![GitHub Stars](https://img.shields.io/github/stars/CheMiguel23/MemoryMesh.svg?style=social)
@@ -223,6 +223,14 @@ Experiment with different prompts to find what works best for your use case!
 
 ## Installation
 
+### Installing via Smithery
+
+To install MemoryMesh for Claude Desktop automatically via [Smithery](https://smithery.ai/server/memorymesh):
+
+```bash
+npx -y @smithery/cli install memorymesh --client claude
+```
+
 ### Prerequisites
 
 *   **Node.js:** Version 18 or higher. You can download it from [nodejs.org](https://nodejs.org/).
@@ -311,14 +319,6 @@ Before updates, make sure to back up your `dist/data` directory to avoid losing 
     *   Make sure your `npm run build` command completed without errors.
     *   Verify that your schema files are correctly placed in `dist/data/schemas` and follow the correct naming convention (`add_[entity].schema.json`).
     *   Check your server's console output or logs for any errors during initialization.
-
-### Installing via Smithery
-
-To install MemoryMesh for Claude Desktop automatically via [Smithery](https://smithery.ai/protocol/memorymesh):
-
-```bash
-npx @smithery/cli install memorymesh --client claude
-```
 
 ## Advanced Configuration
 MemoryMesh offers several ways to customize its behavior beyond the basic setup:
