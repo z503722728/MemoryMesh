@@ -1,0 +1,9 @@
+{"type":"node","name":"新手村","nodeType":"location","metadata":["name: 新手村","type: 村庄","description: 一个宁静祥和的小村庄，是冒险者们旅程的起点。","status: 和平"]}
+{"type":"node","name":"冒险者","nodeType":"player_character","metadata":["name: 冒险者","age: 20","gender: 未知","occupation: 冒险者","status: 健康","description: 一位充满潜力的新晋冒险者。"]}
+{"type":"node","name":"村长","nodeType":"npc","metadata":["name: 村长","role: 村长","status: 健康","description: 新手村的村长，一位和蔼的长者。","currentLocation: 新手村"]}
+{"type":"node","name":"村长的委托","nodeType":"quest","metadata":["name: 村长的委托","description: 村长似乎有些事情需要帮忙。","status: Active","objectives: 与村长对话","rewards: 少量金币","relatedNPCs: 村长"]}
+{"type":"node","name":"金币","nodeType":"currency","metadata":["name: 金币","quantity: 100","description: 通用的货币","owner: 冒险者"]}
+{"type":"node","name":"冒险者_inventory","nodeType":"inventory","metadata":["name: 冒险者_inventory","items: 破旧的木剑, 新手布衣","owner: 冒险者"]}
+{"type":"edge","from":"村长","to":"新手村","edgeType":"located_in"}
+{"type":"edge","from":"金币","to":"冒险者","edgeType":"owned_by"}
+{"type":"edge","from":"冒险者_inventory","to":"冒险者","edgeType":"owned_by"}

@@ -1,39 +1,39 @@
 // src/config/config.ts
 
 import path from 'path';
-import {fileURLToPath} from 'url';
+import { isAbsolute } from 'path';
+import { fileURLToPath } from 'url';
+import minimist from 'minimist';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const argv = minimist(process.argv.slice(2));
 
-// Helper function to get the memory file path from command-line arguments
-function getMemoryFileArg(): string | undefined {
-    const argName = '--memory-file=';
-    // process.argv includes the node executable and the script path as the first two elements
-    // So we search from the third element onwards for arguments to the script
-    for (let i = 2; i < process.argv.length; i++) {
-        if (process.argv[i].startsWith(argName)) {
-            return process.argv[i].substring(argName.length);
+/**
+ * Determines the absolute path for a configuration file/directory.
+ * Priority:
+ * 1. Command line argument
+ * 2. Environment variable
+ * 3. Default path
+ *
+ * @param argName The name of the command line argument (e.g., 'memory-path').
+ * @param envVarName The name of the environment variable (e.g., 'MEMORY_FILE_PATH').
+ * @param defaultPathSegments Segments to join with __dirname for the default path (e.g., ['..', 'data', 'memory.jsonl']).
+ * @returns The determined absolute path.
+ */
+function determinePath(argName: string, envVarName: string, defaultPathSegments: string[]): string {
+    let customPath = argv[argName] || process.env[envVarName];
+
+    if (customPath) {
+        if (isAbsolute(customPath)) {
+            return customPath;
         }
-        // Note: This is a simple parser. For more complex needs (e.g., --memory-file path),
-        // a dedicated CLI argument parsing library like yargs or commander would be more robust.
+        return path.resolve(process.cwd(), customPath);
     }
-    return undefined;
+    return path.join(__dirname, ...defaultPathSegments);
 }
 
-const customMemoryPathArg = getMemoryFileArg();
-let determinedMemoryFile: string;
-
-if (customMemoryPathArg) {
-    if (path.isAbsolute(customMemoryPathArg)) {
-        determinedMemoryFile = customMemoryPathArg;
-    } else {
-        // Resolve relative paths from the current working directory
-        determinedMemoryFile = path.resolve(process.cwd(), customMemoryPathArg);
-    }
-} else {
-    // Default path if no argument is provided
-    determinedMemoryFile = path.join(__dirname, '..', 'data', 'memory.jsonl');
-}
+const determinedMemoryFile = determinePath('memory-path', 'MEMORY_FILE_PATH', ['..', 'data', 'memory.jsonl']);
+const determinedSchemasDir = determinePath('schemas-path', 'SCHEMAS_DIR_PATH', ['..', 'data', 'schemas']);
 
 interface ServerConfig {
     NAME: string;
@@ -66,7 +66,7 @@ export const CONFIG: Config = {
 
     PATHS: {
         /** Path to schema files directory. */
-        SCHEMAS_DIR: path.join(__dirname, '..', 'data', 'schemas'),
+        SCHEMAS_DIR: determinedSchemasDir,
         /** Path to the memory JSON file. */
         MEMORY_FILE: determinedMemoryFile,
     },
