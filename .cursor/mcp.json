@@ -3,7 +3,7 @@
     "memorymesh": {
       "command": "node",
       "args": [
-        "E:/小说/MemoryMesh/dist/index.js",
+        "F:/小说/MemoryMesh/dist/index.js",
         "--memory-path",
         "./memermesh/memory.jsonl"
       ]
