@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Memory Viewer</title>
+    <title>记忆查看器</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ace.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
     <style>
@@ -531,11 +531,11 @@
     </style>
 </head>
 <body>
-<h1>Memory Viewer</h1>
+<h1>记忆查看器</h1>
 
 <div class="file-section">
-    <button class="btn" id="selectMemoryFileBtn">Select Memory File</button>
-    <div class="file-path" id="filePath">No file selected</div>
+    <button class="btn" id="selectMemoryFileBtn">选择记忆文件</button>
+    <div class="file-path" id="filePath">未选择文件</div>
 </div>
 
 <!-- Toast Notifications Container -->
@@ -544,50 +544,50 @@
 <!-- Stats Panel -->
 <div class="stats-panel">
     <div class="stat-card">
-        <div class="stat-title">Total Nodes</div>
+        <div class="stat-title">节点总数</div>
         <div class="stat-value" id="totalNodes">0</div>
     </div>
     <div class="stat-card">
-        <div class="stat-title">Total Edges</div>
+        <div class="stat-title">关系总数</div>
         <div class="stat-value" id="totalEdges">0</div>
     </div>
     <div class="stat-card">
-        <div class="stat-title">Node Types</div>
+        <div class="stat-title">节点类型数</div>
         <div class="stat-value" id="nodeTypes">0</div>
     </div>
     <div class="stat-card">
-        <div class="stat-title">Edge Types</div>
+        <div class="stat-title">关系类型数</div>
         <div class="stat-value" id="edgeTypes">0</div>
     </div>
 </div>
 
 <!-- Tabs -->
 <div class="tabs">
-    <button class="tab active" data-tab="table">Table View</button>
-    <button class="tab" data-tab="graph">Graph View</button>
+    <button class="tab active" data-tab="table">表格视图</button>
+    <button class="tab" data-tab="graph">图谱视图</button>
 </div>
 
 <!-- Table View -->
 <div id="tableView" class="tab-content active">
     <div class="search-container">
-        <input type="text" class="search-input" id="searchInput" placeholder="Search...">
+        <input type="text" class="search-input" id="searchInput" placeholder="搜索...">
         <select class="filter-select" id="typeFilter">
-            <option value="all">All Types</option>
+            <option value="all">所有类型</option>
         </select>
         <select class="filter-select" id="viewFilter">
-            <option value="all">All Items</option>
-            <option value="nodes">Nodes Only</option>
-            <option value="edges">Edges Only</option>
+            <option value="all">所有项目</option>
+            <option value="nodes">仅节点</option>
+            <option value="edges">仅关系</option>
         </select>
     </div>
     <div class="table-container">
         <table id="memoryTable">
             <thead>
                 <tr>
-                    <th>Type</th>
-                    <th>Name/From</th>
-                    <th>NodeType/To</th>
-                    <th>Metadata/EdgeType</th>
+                    <th>类别</th>
+                    <th>名称/源节点</th>
+                    <th>节点类型/目标节点</th>
+                    <th>元数据/关系类型</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -597,21 +597,21 @@
 
 <!-- Graph View -->
 <div id="graphView" class="tab-content">
-    <p>Select a node in the Table View to visualize its connections, or implement a search/selection method here.</p>
+    <p>请在表格视图中选择一个节点以可视化其连接，或在此处实现搜索/选择方法。</p>
     <div id="graphViewContainer"></div>
 </div>
 
 <!-- Loading Indicator HTML (initially hidden) -->
 <div id="loadingOverlay" class="loading-overlay" style="display: none;">
     <div class="loading-spinner"></div>
-    <p>Loading data, please wait...</p>
+    <p>正在加载数据，请稍候...</p>
 </div>
 
 <!-- Node Details Modal -->
 <div id="nodeDetailsModal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="nodeDetailsModalTitle">Node Details</h2>
+            <h2 id="nodeDetailsModalTitle">节点详情</h2>
             <button id="nodeDetailsModalCloseBtn" class="modal-close-btn">&times;</button>
         </div>
         <div class="modal-body">
@@ -746,13 +746,11 @@
                     try {
                         return JSON.parse(line);
                     } catch (parseError) {
-                        // console.error('Error parsing line in worker:', line, parseError);
-                        // Send an error back or a special object for the problematic line
                         self.postMessage({ error: 'Error parsing line', details: line.substring(0, 100) + (line.length > 100 ? '...' : '') });
-                        return null; // Or some indicator of an error
+                        return null;
                     }
                 })
-                .filter(obj => obj !== null); // Filter out lines that failed to parse
+                .filter(obj => obj !== null);
 
             self.postMessage({ success: true, data: jsonObjects });
         } catch (error) {
@@ -766,33 +764,28 @@
         parserWorker = new Worker(URL.createObjectURL(blob));
 
         parserWorker.onmessage = function(e) {
-            // Handle messages from worker
-            // TODO: Add UI loading state management (disable on message/error)
             if (e.data.error) {
-                showToast('Error in worker: ' + e.data.error + (e.data.details ? ` (Line: ${e.data.details})` : ''), 'error');
-                hideLoadingIndicator();
+                showToast('Worker处理时发生错误: ' + e.data.error + (e.data.details ? ` (行: ${e.data.details})` : ''), 'error');
             } else if (e.data.success) {
                 currentData = e.data.data;
-                updateViews(currentData); // Existing function to update UI
-                showToast('Memory file processed by worker successfully!', 'success');
+                updateViews(currentData);
+                showToast('记忆文件已由 Worker 成功处理！', 'success');
                 hideLoadingIndicator();
             }
         };
 
         parserWorker.onerror = function(error) {
-            // TODO: Add UI loading state management (disable on error)
-            showToast('Worker error: ' + error.message, 'error');
+            showToast('Worker 运行错误: ' + error.message, 'error');
             console.error('Worker error:', error);
-            // Fallback or disable worker usage if persistent errors occur
-            parserWorker = null; 
-            showToast('Parser worker failed. Subsequent loads will use main thread.', 'warning');
+            parserWorker = null;
+            showToast('解析器 Worker 失败。后续加载将使用主线程。', 'warning');
             hideLoadingIndicator();
         };
     } catch (error) {
-        showToast('Failed to initialize parser worker. Parsing will occur on main thread.', 'warning');
+        showToast('初始化解析器 Worker 失败。将在主线程进行解析。', 'warning');
         console.error('Worker initialization failed:', error);
-        parserWorker = null; // Fallback to main thread parsing if worker init fails
-        hideLoadingIndicator(); // Hide if worker init itself fails
+        parserWorker = null;
+        hideLoadingIndicator();
     }
 
     // --- IndexedDB Operations ---
@@ -858,36 +851,35 @@
             try {
                 let options = {id: 'memory-file', mode: 'read'};
                 const storedHandle = await idb.getFileHandleFromDB();
-                // options.startIn = storedHandle || 'documents'; // startIn is deprecated for security reasons
                 [fileHandle] = await window.showOpenFilePicker(options);
                 if (storedHandle && fileHandle.name !== storedHandle.name) {
                     await idb.removeFileHandleFromDB();
                 }
                 document.getElementById('filePath').textContent = fileHandle.name;
-                await fileSystem.loadFile(); // This will now potentially use the worker
-                showToast('File selected successfully!', 'success');
+                await fileSystem.loadFile();
+                showToast('文件选择成功！', 'success');
                 await idb.saveFileHandle(fileHandle);
             } catch (error) {
                 if (error.name !== 'AbortError') {
-                    showToast('Error selecting file: ' + error.message, 'error');
+                    showToast('选择文件时发生错误: ' + error.message, 'error');
                 }
-                hideLoadingIndicator(); // Ensure hidden if selectFile itself errors before loadFile
+                hideLoadingIndicator();
             }
         },
         loadFile: async () => {
             if (!fileHandle) {
-                showToast('Please select a memory file first', 'error');
+                showToast('请先选择一个记忆文件', 'error');
                 return;
             }
-            showLoadingIndicator(); // Show when loading starts
+            showLoadingIndicator();
 
             try {
                 const file = await fileHandle.getFile();
 
-                if (parserWorker) { // If worker is available, use it
-                    parserWorker.postMessage(file); // Send the File object to the worker
-                } else { // Fallback to main thread parsing
-                    showToast('Parsing on main thread (worker not available or failed).', 'warning');
+                if (parserWorker) {
+                    parserWorker.postMessage(file);
+                } else {
+                    showToast('正在主线程解析 (Worker 不可用或已失败)。', 'warning');
                     const content = await file.text();
                     const lines = content.split('\n');
                     const jsonObjects = lines
@@ -896,20 +888,20 @@
                             try {
                                 return JSON.parse(line);
                             } catch (parseError) {
-                                showToast(`Error parsing line: ${line.substring(0, 50)}...`, 'error');
+                                showToast(`解析行时发生错误: ${line.substring(0, 50)}...`, 'error');
                                 console.error('Error parsing line on main thread:', line, parseError);
                                 return null;
                             }
                         })
                         .filter(obj => obj !== null);
 
-                    currentData = jsonObjects;
+                currentData = jsonObjects;
                     updateViews(currentData);
-                    showToast('Memory file loaded (main thread) successfully!', 'success');
+                    showToast('记忆文件已在主线程成功加载！', 'success');
                     hideLoadingIndicator();
                 }
             } catch (error) {
-                showToast('Error loading memory file: ' + error.message, 'error');
+                showToast('加载记忆文件时发生错误: ' + error.message, 'error');
                 hideLoadingIndicator();
             }
         }
@@ -933,13 +925,13 @@
         [...nodeTypeSet].sort().forEach(type => {
             const option = document.createElement('option');
             option.value = `node:${type}`;
-            option.textContent = `Node: ${type}`;
+            option.textContent = `节点: ${type}`;
             typeFilter.appendChild(option);
         });
         [...edgeTypeSet].sort().forEach(type => {
             const option = document.createElement('option');
             option.value = `edge:${type}`;
-            option.textContent = `Edge: ${type}`;
+            option.textContent = `关系: ${type}`;
             typeFilter.appendChild(option);
         });
     }
@@ -1034,7 +1026,7 @@
                 nodeNameSpan.style.cursor = 'pointer';
                 nodeNameSpan.style.color = 'var(--primary-dark)';
                 nodeNameSpan.style.fontWeight = '500';
-                nodeNameSpan.title = `Click to view '${item.name}' in graph`;
+                nodeNameSpan.title = `点击在图谱中查看 '${item.name}'`;
                 nodeNameSpan.addEventListener('click', (e) => {
                     e.stopPropagation(); // Prevent other row/cell clicks if any
                     graphManager.renderGraph(item.name);
@@ -1048,7 +1040,7 @@
                     edgeLinkContainer.style.marginTop = '0.25rem'; 
                     const edgeLink = document.createElement('a');
                     edgeLink.className = 'edge-link'; 
-                    edgeLink.innerHTML = `View Edges <span class="edge-count">${edges.length}</span>`;
+                    edgeLink.innerHTML = `查看关系 <span class="edge-count">${edges.length}</span>`;
                     edgeLinkContainer.appendChild(edgeLink);
 
                     const edgeList = document.createElement('div');
@@ -1065,7 +1057,7 @@
                         targetNodeSpan.textContent = `→ ${edge.to}`;
                         targetNodeSpan.style.cursor = 'pointer';
                         targetNodeSpan.style.color = 'var(--primary-dark)';
-                        targetNodeSpan.title = `Click to view '${edge.to}' in graph (also scrolls in table)`;
+                        targetNodeSpan.title = `点击在图谱中查看 '${edge.to}' (同时在表格中滚动)`;
                         targetNodeSpan.addEventListener('click', (e) => {
                             // No stopPropagation() here to allow table's delegated listener to scroll
                             graphManager.renderGraph(edge.to);
@@ -1091,7 +1083,7 @@
                 fromNodeSpan.style.cursor = 'pointer';
                 fromNodeSpan.style.color = 'var(--primary-dark)';
                 fromNodeSpan.style.fontWeight = '500';
-                fromNodeSpan.title = `Click to view '${item.from}' in graph`;
+                fromNodeSpan.title = `点击在图谱中查看 '${item.from}'`;
                 fromNodeSpan.addEventListener('click', (e) => {
                     e.stopPropagation(); 
                     graphManager.renderGraph(item.from);
@@ -1113,7 +1105,7 @@
                 toNodeSpan.style.cursor = 'pointer'; 
                 toNodeSpan.style.color = 'var(--primary-dark)'; 
                 toNodeSpan.style.fontWeight = '500';
-                toNodeSpan.title = `Click to view '${item.to}' in graph (also scrolls in table)`;
+                toNodeSpan.title = `点击在图谱中查看 '${item.to}' (同时在表格中滚动)`;
                 toNodeSpan.addEventListener('click', (e) => {
                     // No stopPropagation() to allow table's delegated listener to scroll
                     graphManager.renderGraph(item.to);
@@ -1127,7 +1119,7 @@
             if (item.type === 'node' && item.metadata) {
                 const metadataHeader = document.createElement('div');
                 metadataHeader.className = 'metadata-header';
-                const expandButtonHTML = `<button class="expand-button" data-action="toggle-metadata">Show Metadata</button>`;
+                const expandButtonHTML = `<button class="expand-button" data-action="toggle-metadata">显示元数据</button>`;
                 const metadataCount = document.createElement('span');
                 metadataCount.className = 'metadata-summary';
                 metadataCount.textContent = `${item.metadata.length} entries`;
@@ -1226,7 +1218,7 @@
             const dataElement = document.getElementById('nodeDetailsModalData');
 
             if (modal && titleElement && dataElement) {
-                titleElement.textContent = nodeRawData && nodeRawData.name ? `Details: ${nodeRawData.name}` : 'Node Details';
+                titleElement.textContent = nodeRawData && nodeRawData.name ? `详情: ${nodeRawData.name}` : '节点详情';
                 dataElement.textContent = JSON.stringify(nodeRawData, null, 2); // Pretty print JSON
                 modal.style.display = 'flex';
             }
@@ -1248,8 +1240,7 @@
         init: function() {
             const container = document.getElementById(this.containerId);
             if (!container) {
-                console.error('Graph container not found:', this.containerId);
-                // utils.showToast('Graph container element not found!', 'error'); // Ensure utils is accessible or remove
+                console.error('Graph container element not found:', this.containerId);
                 return;
             }
 
@@ -1316,7 +1307,6 @@
                         name: 'grid' 
                     }
                 });
-                // console.log('Cytoscape initialized with resolved CSS variables');
 
                 // Add tap listener for nodes in the graph
                 this.instance.on('tap', 'node', (evt) => {
@@ -1328,7 +1318,6 @@
 
             } catch (e) {
                 console.error("Cytoscape initialization error:", e);
-                // utils.showToast("Error initializing graph view.", "error"); // Ensure utils is accessible or remove
             }
         },
 
@@ -1341,7 +1330,6 @@
             const visitedNodes = new Set();
 
             if (!currentData.find(n => n.type === 'node' && n.name === centerNodeName)){
-                // console.warn(`Center node ${centerNodeName} not found in currentData.`);
                 return { nodes: [], edges: [] };
             }
 
@@ -1390,8 +1378,6 @@
                             if (!cyNodesMap.has(neighborName)){
                                 const neighborNodeData = currentData.find(n => n.type === 'node' && n.name === neighborName); 
                                 if(neighborNodeData){
-                                    // console.log('Neighbor Name:', neighborName, typeof neighborName);
-                                    // console.log('Neighbor Type:', neighborNodeData.nodeType, typeof neighborNodeData.nodeType);
                                     cyNodesMap.set(neighborName, {
                                         data: {
                                             id: neighborName,
@@ -1415,7 +1401,7 @@
                 console.warn('Cytoscape instance not initialized. Attempting to initialize now.');
                 this.init(); 
                 if(!this.instance) {
-                    utils.showToast("Graph display could not be initialized.", "error");
+                    utils.showToast("图谱显示未能初始化。", "error");
                     return;
                 }
             }
@@ -1425,7 +1411,7 @@
             const graphData = this.transformDataForCytoscape(nodeName, depth);
 
             if (graphData.nodes.length === 0 && nodeName) {
-                utils.showToast(`Node "${nodeName}" not found or no connected data for graph.`, 'warning');
+                utils.showToast(`节点 "${nodeName}" 未找到或没有可供图谱显示的相关数据。`, 'warning');
                 this.instance.elements().remove(); 
                 return;
             }
@@ -1624,7 +1610,7 @@
                             if (grid) {
                                 const isExpanded = grid.style.display !== 'none';
                                 grid.style.display = isExpanded ? 'none' : 'grid';
-                                target.textContent = isExpanded ? 'Show Metadata' : 'Hide Metadata';
+                                target.textContent = isExpanded ? '显示元数据' : '隐藏元数据';
                             }
                         }
                     }
@@ -1654,12 +1640,12 @@
         try {
             await idb.initDB();
         } catch (error) {
-            showToast('Error initializing database: ' + error.message, 'error');
+            showToast('初始化数据库时发生错误: ' + error.message, 'error');
             return;
         }
 
         if (!('showOpenFilePicker' in window)) {
-            showToast('Your browser does not support the File System Access API. Please use a modern browser like Chrome or Edge.', 'error', 0);
+            showToast('您的浏览器不支持文件系统访问 API。请使用 Chrome 或 Edge 等现代浏览器。如果问题持续，请检查浏览器设置或尝试其他浏览器。', 'error', 0);
             hideLoadingIndicator(); // Ensure hidden if API not supported early
             return;
         }
@@ -1672,18 +1658,18 @@
                     fileHandle = storedHandle;
                     document.getElementById('filePath').textContent = fileHandle.name;
                     await fileSystem.loadFile();
-                    showToast('Loaded previously selected file.', 'success');
+                    showToast('已加载先前选择的文件。', 'success');
                 } else {
                     await idb.removeFileHandleFromDB();
-                    showToast('Permission to access the previously selected file was denied or expired.', 'error');
-                    hideLoadingIndicator(); // Ensure hidden if permission denied for stored handle
+                    showToast('访问先前所选文件的权限被拒绝或已过期。', 'error');
+                    hideLoadingIndicator();
                 }
             } else {
-                hideLoadingIndicator(); // If no stored handle, ensure indicator is hidden
+                hideLoadingIndicator();
             }
         } catch (error) {
-            showToast('Error accessing stored file: ' + error.message, 'error');
-            hideLoadingIndicator(); // Ensure hidden on error with stored handle
+            showToast('访问存储的文件时发生错误: ' + error.message, 'error');
+            hideLoadingIndicator();
         }
 
         setupEventListeners();
