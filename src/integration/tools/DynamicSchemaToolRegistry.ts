@@ -287,11 +287,16 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
                                 singularSchemaName,
                                 knowledgeGraphManager
                             );
-                            // Accessing fields within result.toolResult based on typical ToolResponse structure
                             if (result.toolResult?.isError) {
-                                // Assuming error details might be in result.toolResult.data or a specific error field if isError is true
-                                const errorDetail = result.toolResult.data?.message || result.toolResult.data?.toString() || String(result.toolResult.data);
-                                updateErrors.push({item: updateItem.name, error: errorDetail });
+                                let extractedErrorMessage: string | undefined;
+                                if (result.toolResult.content && result.toolResult.content.length > 0) {
+                                    const firstTextContent = result.toolResult.content.find(c => c.type === 'text');
+                                    if (firstTextContent && typeof firstTextContent.text === 'string') {
+                                        extractedErrorMessage = firstTextContent.text;
+                                    }
+                                }
+                                const errorMessage = extractedErrorMessage || `Update failed for ${updateItem.name}. Details unavailable.`;
+                                updateErrors.push({item: updateItem.name, error: errorMessage});
                             } else {
                                 updateResults.push(result.toolResult?.actionTaken || `Updated ${updateItem.name}`);
                             }
@@ -330,11 +335,16 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
                         }
                         try {
                             const result = await handleSchemaDelete(name, singularSchemaName, knowledgeGraphManager);
-                            // Accessing fields within result.toolResult based on typical ToolResponse structure
                             if (result.toolResult?.isError) {
-                                // Assuming error details might be in result.toolResult.data or a specific error field if isError is true
-                                const errorDetail = result.toolResult.data?.message || result.toolResult.data?.toString() || String(result.toolResult.data);
-                                deletionErrors.push({item: name, error: errorDetail });
+                                let extractedErrorMessage: string | undefined;
+                                if (result.toolResult.content && result.toolResult.content.length > 0) {
+                                    const firstTextContent = result.toolResult.content.find(c => c.type === 'text');
+                                    if (firstTextContent && typeof firstTextContent.text === 'string') {
+                                        extractedErrorMessage = firstTextContent.text;
+                                    }
+                                }
+                                const errorMessage = extractedErrorMessage || `Delete failed for ${name}. Details unavailable.`;
+                                deletionErrors.push({item: name, error: errorMessage});
                             } else {
                                 deletionResults.push(result.toolResult?.actionTaken || `Deleted ${name}`);
                             }

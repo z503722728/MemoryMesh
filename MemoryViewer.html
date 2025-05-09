@@ -137,7 +137,10 @@
         /* --- Table View --- */
         .table-container {
             overflow-x: auto;
+            overflow-y: auto;
+            height: 70vh;
             margin-bottom: 2rem;
+            border: 1px solid var(--gray-300);
         }
 
         table {
@@ -440,7 +443,6 @@
 <!-- Tabs -->
 <div class="tabs">
     <button class="tab active" data-tab="table">Table View</button>
-    <button class="tab" data-tab="raw">Raw JSON</button>
 </div>
 
 <!-- Table View -->
@@ -471,21 +473,93 @@
     </div>
 </div>
 
-<!-- Raw JSON View -->
-<div id="rawView" class="tab-content">
-    <div class="editor-container">
-        <div id="jsonEditor"></div>
-    </div>
-</div>
-
 <script>
     // --- Constants and State ---
     const DB_NAME = 'MemoryViewerDB';
     const STORE_NAME = 'file';
     let db = null;
     let fileHandle = null;
-    let jsonEditor = null;
     let currentData = null;
+    let parserWorker = null; // New: For the Web Worker
+
+    // Virtual List State
+    const VIRTUAL_LIST_ROW_HEIGHT = 55; // Approximate height of a complex row in pixels. Adjust!
+    let virtualListVisibleStartIndex = 0;
+    let virtualListVisibleEndIndex = 0;
+    let virtualListFullData = []; // Holds the currently active dataset for the virtual list
+    let virtualListTableBody = null;
+    let virtualListTableContainer = null;
+    let virtualListScrollPaddingTop = null; // Element for top padding
+    let virtualListScrollPaddingBottom = null; // Element for bottom padding
+    let nodeEdges = new Map(); // New: For mapping nodes to their edges
+
+    // --- Worker Script (parser.worker.js content as a string) ---
+    const workerScriptContent = `
+    self.onmessage = async function(e) {
+        const fileOrContent = e.data; // Can be File object or raw text content
+
+        try {
+            let contentText;
+            if (fileOrContent instanceof File) {
+                contentText = await fileOrContent.text();
+            } else if (typeof fileOrContent === 'string') {
+                contentText = fileOrContent;
+            } else {
+                self.postMessage({ error: 'Invalid data type received by worker.' });
+                return;
+            }
+
+            const lines = contentText.split('\\n');
+            const jsonObjects = lines
+                .filter(line => line.trim() !== '')
+                .map(line => {
+                    try {
+                        return JSON.parse(line);
+                    } catch (parseError) {
+                        // console.error('Error parsing line in worker:', line, parseError);
+                        // Send an error back or a special object for the problematic line
+                        self.postMessage({ error: 'Error parsing line', details: line.substring(0, 100) + (line.length > 100 ? '...' : '') });
+                        return null; // Or some indicator of an error
+                    }
+                })
+                .filter(obj => obj !== null); // Filter out lines that failed to parse
+
+            self.postMessage({ success: true, data: jsonObjects });
+        } catch (error) {
+            self.postMessage({ error: error.message });
+        }
+    };
+    `;
+
+    try {
+        const blob = new Blob([workerScriptContent], { type: 'application/javascript' });
+        parserWorker = new Worker(URL.createObjectURL(blob));
+
+        parserWorker.onmessage = function(e) {
+            // Handle messages from worker
+            // TODO: Add UI loading state management (disable on message/error)
+            if (e.data.error) {
+                showToast('Error in worker: ' + e.data.error + (e.data.details ? ` (Line: ${e.data.details})` : ''), 'error');
+            } else if (e.data.success) {
+                currentData = e.data.data;
+                updateViews(currentData); // Existing function to update UI
+                showToast('Memory file processed by worker successfully!', 'success');
+            }
+        };
+
+        parserWorker.onerror = function(error) {
+            // TODO: Add UI loading state management (disable on error)
+            showToast('Worker error: ' + error.message, 'error');
+            console.error('Worker error:', error);
+            // Fallback or disable worker usage if persistent errors occur
+            parserWorker = null; 
+            showToast('Parser worker failed. Subsequent loads will use main thread.', 'warning');
+        };
+    } catch (error) {
+        showToast('Failed to initialize parser worker. Parsing will occur on main thread.', 'warning');
+        console.error('Worker initialization failed:', error);
+        parserWorker = null; // Fallback to main thread parsing if worker init fails
+    }
 
     // --- Utility Functions ---
     function showToast(message, type = 'success', duration = 3000) {
@@ -495,6 +569,18 @@
         toast.textContent = message;
         toastContainer.appendChild(toast);
         setTimeout(() => toast.remove(), duration + 1000);
+    }
+
+    function throttle(func, limit) {
+        let inThrottle;
+        return function(...args) {
+            const context = this;
+            if (!inThrottle) {
+                func.apply(context, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        }
     }
 
     function parseMetadata(metadata) {
@@ -606,13 +692,13 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
             try {
                 let options = {id: 'memory-file', mode: 'read'};
                 const storedHandle = await idb.getFileHandleFromDB();
-                options.startIn = storedHandle || 'documents';
+                // options.startIn = storedHandle || 'documents'; // startIn is deprecated for security reasons
                 [fileHandle] = await window.showOpenFilePicker(options);
                 if (storedHandle && fileHandle.name !== storedHandle.name) {
                     await idb.removeFileHandleFromDB();
                 }
                 document.getElementById('filePath').textContent = fileHandle.name;
-                await fileSystem.loadFile();
+                await fileSystem.loadFile(); // This will now potentially use the worker
                 showToast('File selected successfully!', 'success');
                 await idb.saveFileHandle(fileHandle);
             } catch (error) {
@@ -626,21 +712,39 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
                 showToast('Please select a memory file first', 'error');
                 return;
             }
+            // TODO: Add UI loading state management (enable on load start)
+            showToast('Loading and processing file...', 'success'); // Simple loading indicator
+
             try {
                 const file = await fileHandle.getFile();
-                const content = await file.text();
 
-                // Split content into lines and parse each line as JSON
-                const lines = content.split('\n');
-                const jsonObjects = lines
-                    .filter(line => line.trim() !== '')
-                    .map(line => JSON.parse(line));
+                if (parserWorker) { // If worker is available, use it
+                    parserWorker.postMessage(file); // Send the File object to the worker
+                } else { // Fallback to main thread parsing
+                    showToast('Parsing on main thread (worker not available or failed).', 'warning');
+                    const content = await file.text();
+                    const lines = content.split('\n');
+                    const jsonObjects = lines
+                        .filter(line => line.trim() !== '')
+                        .map(line => {
+                            try {
+                                return JSON.parse(line);
+                            } catch (parseError) {
+                                showToast(`Error parsing line: ${line.substring(0, 50)}...`, 'error');
+                                console.error('Error parsing line on main thread:', line, parseError);
+                                return null;
+                            }
+                        })
+                        .filter(obj => obj !== null);
 
-                currentData = jsonObjects;
-                updateViews(jsonObjects);
-                showToast('Memory file loaded successfully!', 'success');
+                    currentData = jsonObjects;
+                    updateViews(currentData);
+                    showToast('Memory file loaded (main thread) successfully!', 'success');
+                    // TODO: Add UI loading state management (disable for main thread path)
+                }
             } catch (error) {
                 showToast('Error loading memory file: ' + error.message, 'error');
+                // TODO: Add UI loading state management (disable on error)
             }
         }
     };
@@ -674,13 +778,179 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
         });
     }
 
-    function updateTable(data, searchTerm = '', typeFilter = 'all', viewFilter = 'all') {
-        const tbody = document.querySelector('#memoryTable tbody');
-        tbody.innerHTML = '';
+    // FORWARD DECLARATION for renderVisibleVirtualRows
+    function renderVisibleVirtualRows() {}
 
-        // Create a map of node relationships
-        const nodeEdges = new Map();
-        data.forEach(item => {
+    function updateTableVirtual(dataToRender, totalDataCount) { // Renamed and adapted for virtual list
+        if (!virtualListTableBody) {
+            virtualListTableBody = document.querySelector('#memoryTable tbody');
+        }
+        if (!virtualListTableContainer) {
+            virtualListTableContainer = document.querySelector('.table-container');
+        }
+
+        if (!virtualListTableBody || !virtualListTableContainer) {
+            console.error("Virtual list table elements not found!");
+            return;
+        }
+
+        // Clear previous content and padding elements
+        virtualListTableBody.innerHTML = '';
+
+        // Create padding elements if they don't exist
+        if (!virtualListScrollPaddingTop) {
+            virtualListScrollPaddingTop = document.createElement('div');
+            virtualListScrollPaddingTop.id = 'virtualScrollPaddingTop';
+            virtualListTableBody.appendChild(virtualListScrollPaddingTop);
+        }
+        if (!virtualListScrollPaddingBottom) {
+            virtualListScrollPaddingBottom = document.createElement('div');
+            virtualListScrollPaddingBottom.id = 'virtualScrollPaddingBottom';
+            // This will be appended after rendered rows later
+        }
+
+        // Calculate how many items can fit in the container
+        const containerHeight = virtualListTableContainer.clientHeight;
+        const itemsThatFit = Math.ceil(containerHeight / VIRTUAL_LIST_ROW_HEIGHT);
+        
+        // Calculate visible window based on scroll position
+        virtualListVisibleStartIndex = Math.floor(virtualListTableContainer.scrollTop / VIRTUAL_LIST_ROW_HEIGHT);
+        virtualListVisibleEndIndex = Math.min(virtualListVisibleStartIndex + itemsThatFit + 5, totalDataCount -1); // +5 for buffer
+        virtualListVisibleStartIndex = Math.max(0, virtualListVisibleStartIndex -2); // -2 for buffer (rendering a bit before)
+
+
+        // Update top padding
+        virtualListScrollPaddingTop.style.height = `${virtualListVisibleStartIndex * VIRTUAL_LIST_ROW_HEIGHT}px`;
+
+        // Render only the visible rows
+        renderVisibleVirtualRows(dataToRender); // dataToRender is the slice of items to display
+
+        // Append bottom padding after rendered rows (if it was detached or first time)
+        if (virtualListScrollPaddingBottom.parentElement !== virtualListTableBody) {
+            virtualListTableBody.appendChild(virtualListScrollPaddingBottom);
+        }
+
+        // Update bottom padding
+        const remainingRows = totalDataCount - (virtualListVisibleEndIndex + 1);
+        virtualListScrollPaddingBottom.style.height = `${Math.max(0, remainingRows * VIRTUAL_LIST_ROW_HEIGHT)}px`;
+
+    }
+
+    function renderVisibleVirtualRows(currentSlice) {
+        if (!virtualListTableBody || !virtualListScrollPaddingTop || !virtualListScrollPaddingBottom) return;
+
+        const rowsToRemove = [];
+        for (let child = virtualListTableBody.firstChild; child; child = child.nextSibling) {
+            if (child !== virtualListScrollPaddingTop && child !== virtualListScrollPaddingBottom) {
+                rowsToRemove.push(child);
+            }
+        }
+        rowsToRemove.forEach(row => virtualListTableBody.removeChild(row));
+
+        const fragment = document.createDocumentFragment();
+
+        for (let i = 0; i < currentSlice.length; i++) {
+            const item = currentSlice[i];
+            const row = document.createElement('tr');
+            row.style.height = `${VIRTUAL_LIST_ROW_HEIGHT}px`;
+
+            // 1. Type column
+            const typeCell = document.createElement('td');
+            typeCell.textContent = item.type;
+            row.appendChild(typeCell);
+
+            // 2. Name/From column
+            const nameCell = document.createElement('td');
+            if (item.type === 'node') {
+                nameCell.textContent = item.name; 
+                const edges = nodeEdges.get(item.name); 
+                if (edges && edges.length > 0) {
+                    nameCell.innerHTML = ''; 
+                    const nodeNameSpan = document.createElement('span'); 
+                    nodeNameSpan.textContent = item.name;
+                    nameCell.appendChild(nodeNameSpan);
+
+                    const edgeLinkContainer = document.createElement('div'); 
+                    edgeLinkContainer.style.marginTop = '0.25rem'; 
+                    const edgeLink = document.createElement('a');
+                    edgeLink.className = 'edge-link'; 
+                    edgeLink.innerHTML = `View Edges <span class="edge-count">${edges.length}</span>`;
+                    edgeLinkContainer.appendChild(edgeLink);
+
+                    const edgeList = document.createElement('div');
+                    edgeList.className = 'edge-list';
+                    edgeList.style.display = 'none';
+
+                    edges.forEach(edge => {
+                        const edgeItemElement = document.createElement('div');
+                        edgeItemElement.className = 'edge-item';
+                        edgeItemElement.innerHTML = `
+                            <span class="edge-type">${edge.edgeType}</span>
+                            <span class="edge-target" data-node="${edge.to}">→ ${edge.to}</span>
+                        `;
+                        edgeList.appendChild(edgeItemElement);
+                    });
+                    
+                    edgeLink.addEventListener('click', (e) => {
+                        e.stopPropagation(); 
+                        edgeList.style.display = edgeList.style.display === 'none' ? 'block' : 'none';
+                    });
+                    
+                    nameCell.appendChild(edgeLinkContainer);
+                    nameCell.appendChild(edgeList);
+                }
+            } else if (item.type === 'edge') {
+                nameCell.textContent = item.from;
+            }
+            row.appendChild(nameCell);
+
+            // 3. NodeType/To column
+            const nodeTypeCell = document.createElement('td');
+            if (item.type === 'node') {
+                nodeTypeCell.textContent = item.nodeType;
+            } else if (item.type === 'edge') {
+                const toNodeSpan = document.createElement('span');
+                toNodeSpan.className = 'edge-target'; 
+                toNodeSpan.dataset.node = item.to;
+                toNodeSpan.textContent = item.to;
+                nodeTypeCell.appendChild(toNodeSpan);
+            }
+            row.appendChild(nodeTypeCell);
+
+            // 4. Metadata/EdgeType column
+            const metadataCell = document.createElement('td');
+            if (item.type === 'node' && item.metadata) {
+                const metadataHeader = document.createElement('div');
+                metadataHeader.className = 'metadata-header';
+                const expandButtonHTML = `<button class="expand-button" data-action="toggle-metadata">Show Metadata</button>`;
+                const metadataCount = document.createElement('span');
+                metadataCount.className = 'metadata-summary';
+                metadataCount.textContent = `${item.metadata.length} entries`;
+                metadataHeader.innerHTML = expandButtonHTML;
+                metadataHeader.appendChild(metadataCount);
+                
+                const metadataContentContainer = createMetadataDisplay(item.metadata);
+                const metadataGrid = metadataContentContainer.querySelector('.metadata-grid');
+                if(metadataGrid) metadataGrid.style.display = 'none';
+                
+                metadataCell.appendChild(metadataHeader);
+                metadataCell.appendChild(metadataContentContainer);
+            } else if (item.type === 'edge') {
+                metadataCell.textContent = item.edgeType;
+            }
+            row.appendChild(metadataCell);
+
+            fragment.appendChild(row);
+        }
+        virtualListTableBody.insertBefore(fragment, virtualListScrollPaddingBottom);
+    }
+
+    function updateViews(data) {
+        updateStats(data);
+        virtualListFullData = data; 
+
+        nodeEdges = new Map(); // Build/rebuild nodeEdges map
+        virtualListFullData.forEach(item => {
             if (item.type === 'edge') {
                 if (!nodeEdges.has(item.from)) {
                     nodeEdges.set(item.from, []);
@@ -689,148 +959,47 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
             }
         });
 
-        const filteredData = data.filter(item => {
-            if (viewFilter === 'nodes' && item.type !== 'node') return false;
-            if (viewFilter === 'edges' && item.type !== 'edge') return false;
-
-            if (typeFilter !== 'all') {
-                const [filterType, filterValue] = typeFilter.split(':');
-                if (filterType === 'node' && (item.type !== 'node' || item.nodeType !== filterValue)) return false;
-                if (filterType === 'edge' && (item.type !== 'edge' || item.edgeType !== filterValue)) return false;
-            }
-
-            if (searchTerm) {
-                const searchLower = searchTerm.toLowerCase();
-                const itemString = JSON.stringify(item).toLowerCase();
-                return itemString.includes(searchLower);
-            }
-
-            return true;
-        });
-
-        // Show only nodes in the main table if edge integration is enabled
-        const displayData = viewFilter === 'edges' ? filteredData : filteredData.filter(item => item.type === 'node');
-
-        displayData.forEach(item => {
-            const row = document.createElement('tr');
-            
-            // Type column
-            const typeCell = document.createElement('td');
-            typeCell.textContent = item.type;
-            row.appendChild(typeCell);
-            
-            // Name column
-            const nameCell = document.createElement('td');
-            nameCell.textContent = item.name;
-            
-            // Add edge information if available
-            const edges = nodeEdges.get(item.name);
-            if (edges && edges.length > 0) {
-                const edgeLink = document.createElement('div');
-                edgeLink.innerHTML = `
-                    <a class="edge-link">
-                        View Edges
-                        <span class="edge-count">${edges.length}</span>
-                    </a>
-                `;
-                
-                const edgeList = document.createElement('div');
-                edgeList.className = 'edge-list';
-                edgeList.style.display = 'none';
-                
-                edges.forEach(edge => {
-                    const edgeItem = document.createElement('div');
-                    edgeItem.className = 'edge-item';
-                    edgeItem.innerHTML = `
-                        <span class="edge-type">${edge.edgeType}</span>
-                        <span class="edge-target" data-node="${edge.to}">→ ${edge.to}</span>
-                    `;
-                    edgeList.appendChild(edgeItem);
-                });
-                
-                edgeLink.querySelector('.edge-link').addEventListener('click', () => {
-                    edgeList.style.display = edgeList.style.display === 'none' ? 'block' : 'none';
-                });
-                
-                nameCell.appendChild(edgeLink);
-                nameCell.appendChild(edgeList);
-            }
-            
-            row.appendChild(nameCell);
-            
-            // NodeType column
-            const nodeTypeCell = document.createElement('td');
-            nodeTypeCell.textContent = item.nodeType;
-            row.appendChild(nodeTypeCell);
-            
-            // Metadata column
-            const metadataCell = document.createElement('td');
-            if (item.metadata) {
-                const metadataHeader = document.createElement('div');
-                metadataHeader.className = 'metadata-header';
-                
-                const expandButton = document.createElement('button');
-                expandButton.className = 'expand-button';
-                expandButton.textContent = 'Show Metadata';
-                
-                const metadataCount = document.createElement('span');
-                metadataCount.className = 'metadata-summary';
-                metadataCount.textContent = `${item.metadata.length} entries`;
-                
-                metadataHeader.appendChild(expandButton);
-                metadataHeader.appendChild(metadataCount);
-                
-                const metadataContent = createMetadataDisplay(item.metadata);
-                metadataContent.querySelector('.metadata-grid').style.display = 'none';
-                
-                expandButton.addEventListener('click', () => {
-                    const grid = metadataContent.querySelector('.metadata-grid');
-                    const isExpanded = grid.style.display !== 'none';
-                    grid.style.display = isExpanded ? 'none' : 'grid';
-                    expandButton.textContent = isExpanded ? 'Show Metadata' : 'Hide Metadata';
-                });
-                
-                metadataCell.appendChild(metadataHeader);
-                metadataCell.appendChild(metadataContent);
-            }
-            row.appendChild(metadataCell);
-            
-            tbody.appendChild(row);
-        });
-
-        // Add click handlers for edge targets
-        document.querySelectorAll('.edge-target').forEach(target => {
-            target.addEventListener('click', () => {
-                const nodeName = target.dataset.node;
-                const nodeRow = [...tbody.rows].find(row => 
-                    row.cells[1].textContent.trim() === nodeName
-                );
-                if (nodeRow) {
-                    nodeRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    nodeRow.style.backgroundColor = '#fff2cc';
-                    setTimeout(() => {
-                        nodeRow.style.backgroundColor = '';
-                    }, 2000);
-                }
-            });
-        });
+        handleVirtualScroll(); 
     }
+    
+    function handleVirtualScroll() {
+        if (!virtualListTableContainer || !virtualListFullData) return;
 
-    function updateViews(data) {
-        // Update statistics
-        updateStats(data);
+        const containerHeight = virtualListTableContainer.clientHeight;
+        const totalDataCount = virtualListFullData.length; // Use the full dataset count
 
-        // Update table view
-        const searchInput = document.getElementById('searchInput');
-        const typeFilter = document.getElementById('typeFilter');
-        const viewFilter = document.getElementById('viewFilter');
-        updateTable(data, searchInput.value, typeFilter.value, viewFilter.value);
+        // Calculate visible window based on scroll position
+        // Add a buffer of items before and after the visible window
+        const bufferItems = 5;
+        let startIndex = Math.max(0, Math.floor(virtualListTableContainer.scrollTop / VIRTUAL_LIST_ROW_HEIGHT) - bufferItems);
+        let endIndex = Math.min(totalDataCount - 1, Math.ceil((virtualListTableContainer.scrollTop + containerHeight) / VIRTUAL_LIST_ROW_HEIGHT) + bufferItems -1) ;
 
-        // Update raw JSON view
-        if (jsonEditor) {
-            jsonEditor.setValue(JSON.stringify(data, null, 2));
-            jsonEditor.clearSelection();
+        // Slice the data that needs to be rendered
+        const dataSlice = virtualListFullData.slice(startIndex, endIndex + 1);
+
+        // Update padding elements to simulate full scroll height
+        if (!virtualListTableBody) virtualListTableBody = document.querySelector('#memoryTable tbody');
+        if (!virtualListScrollPaddingTop) {
+            virtualListScrollPaddingTop = document.getElementById('virtualScrollPaddingTop');
+            if (!virtualListScrollPaddingTop) {
+                virtualListScrollPaddingTop = document.createElement('div');
+                virtualListScrollPaddingTop.id = 'virtualScrollPaddingTop';
+                virtualListTableBody.insertBefore(virtualListScrollPaddingTop, virtualListTableBody.firstChild);
+            }
         }
+        if (!virtualListScrollPaddingBottom) {
+            virtualListScrollPaddingBottom = document.getElementById('virtualScrollPaddingBottom');
+            if (!virtualListScrollPaddingBottom) {
+                virtualListScrollPaddingBottom = document.createElement('div');
+                virtualListScrollPaddingBottom.id = 'virtualScrollPaddingBottom';
+                virtualListTableBody.appendChild(virtualListScrollPaddingBottom);
+            }
+        }
+
+        virtualListScrollPaddingTop.style.height = `${startIndex * VIRTUAL_LIST_ROW_HEIGHT}px`;
+        renderVisibleVirtualRows(dataSlice);
+        const remainingRowsAfterRender = totalDataCount - (endIndex + 1);
+        virtualListScrollPaddingBottom.style.height = `${Math.max(0, remainingRowsAfterRender * VIRTUAL_LIST_ROW_HEIGHT)}px`;
     }
 
     // --- UI Management ---
@@ -838,21 +1007,13 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
         switchTab: (tabName) => {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
-            document.getElementById(`${tabName}View`).classList.add('active');
+            
+            const activeTabButton = document.querySelector(`.tab[data-tab="${tabName}"]`);
+            if (activeTabButton) activeTabButton.classList.add('active');
+            
+            const activeTabContent = document.getElementById(`${tabName}View`);
+            if (activeTabContent) activeTabContent.classList.add('active');
         },
-        setupEditor: () => {
-            jsonEditor = ace.edit("jsonEditor");
-            jsonEditor.setTheme("ace/theme/monokai");
-            jsonEditor.session.setMode("ace/mode/json");
-            jsonEditor.setOptions({
-                fontSize: "14px",
-                showPrintMargin: false,
-                showGutter: true,
-                highlightActiveLine: true,
-                readOnly: true
-            });
-        }
     };
 
     // --- Event Handlers ---
@@ -866,28 +1027,156 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
 
         // Search and filter handlers
         document.getElementById('searchInput').addEventListener('input', (e) => {
-            if (currentData) {
-                const typeFilter = document.getElementById('typeFilter').value;
-                const viewFilter = document.getElementById('viewFilter').value;
-                updateTable(currentData, e.target.value, typeFilter, viewFilter);
+            if (currentData) { 
+                const searchTerm = e.target.value;
+                const typeFilterValue = document.getElementById('typeFilter').value;
+                const viewFilterValue = document.getElementById('viewFilter').value;
+                
+                virtualListFullData = currentData.filter(item => {
+                    if (viewFilterValue === 'nodes' && item.type !== 'node') return false;
+                    if (viewFilterValue === 'edges' && item.type !== 'edge') return false;
+                    if (typeFilterValue !== 'all') {
+                        const [filterType, filterValue] = typeFilterValue.split(':');
+                        if (filterType === 'node' && (item.type !== 'node' || item.nodeType !== filterValue)) return false;
+                        if (filterType === 'edge' && (item.type !== 'edge' || item.edgeType !== filterValue)) return false;
+                    }
+                    if (searchTerm) {
+                        const searchLower = searchTerm.toLowerCase();
+                        const itemString = JSON.stringify(item).toLowerCase();
+                        return itemString.includes(searchLower);
+                    }
+                    return true;
+                });
+
+                nodeEdges = new Map(); // Rebuild nodeEdges for filtered data
+                virtualListFullData.forEach(item => {
+                    if (item.type === 'edge') {
+                        if (!nodeEdges.has(item.from)) {
+                            nodeEdges.set(item.from, []);
+                        }
+                        nodeEdges.get(item.from).push(item);
+                    }
+                });
+
+                if(virtualListTableContainer) virtualListTableContainer.scrollTop = 0; 
+                handleVirtualScroll(); 
             }
         });
 
         document.getElementById('typeFilter').addEventListener('change', (e) => {
             if (currentData) {
+                const typeFilterValue = e.target.value;
                 const searchTerm = document.getElementById('searchInput').value;
-                const viewFilter = document.getElementById('viewFilter').value;
-                updateTable(currentData, searchTerm, e.target.value, viewFilter);
+                const viewFilterValue = document.getElementById('viewFilter').value;
+                virtualListFullData = currentData.filter(item => { 
+                    if (viewFilterValue === 'nodes' && item.type !== 'node') return false;
+                    if (viewFilterValue === 'edges' && item.type !== 'edge') return false;
+                    if (typeFilterValue !== 'all') {
+                        const [filterType, filterValue] = typeFilterValue.split(':');
+                        if (filterType === 'node' && (item.type !== 'node' || item.nodeType !== filterValue)) return false;
+                        if (filterType === 'edge' && (item.type !== 'edge' || item.edgeType !== filterValue)) return false;
+                    }
+                    if (searchTerm) {
+                        const searchLower = searchTerm.toLowerCase();
+                        const itemString = JSON.stringify(item).toLowerCase();
+                        return itemString.includes(searchLower);
+                    }
+                    return true;
+                });
+                nodeEdges = new Map(); // Rebuild nodeEdges for filtered data
+                virtualListFullData.forEach(item => {
+                    if (item.type === 'edge') {
+                        if (!nodeEdges.has(item.from)) {
+                            nodeEdges.set(item.from, []);
+                        }
+                        nodeEdges.get(item.from).push(item);
+                    }
+                });
+                if(virtualListTableContainer) virtualListTableContainer.scrollTop = 0;
+                handleVirtualScroll();
             }
         });
 
         document.getElementById('viewFilter').addEventListener('change', (e) => {
             if (currentData) {
+                const viewFilterValue = e.target.value;
                 const searchTerm = document.getElementById('searchInput').value;
-                const typeFilter = document.getElementById('typeFilter').value;
-                updateTable(currentData, searchTerm, typeFilter, e.target.value);
+                const typeFilterValue = document.getElementById('typeFilter').value;
+                 virtualListFullData = currentData.filter(item => { 
+                    if (viewFilterValue === 'nodes' && item.type !== 'node') return false;
+                    if (viewFilterValue === 'edges' && item.type !== 'edge') return false;
+                    if (typeFilterValue !== 'all') {
+                        const [filterType, filterValue] = typeFilterValue.split(':');
+                        if (filterType === 'node' && (item.type !== 'node' || item.nodeType !== filterValue)) return false;
+                        if (filterType === 'edge' && (item.type !== 'edge' || item.edgeType !== filterValue)) return false;
+                    }
+                    if (searchTerm) {
+                        const searchLower = searchTerm.toLowerCase();
+                        const itemString = JSON.stringify(item).toLowerCase();
+                        return itemString.includes(searchLower);
+                    }
+                    return true;
+                });
+                nodeEdges = new Map(); // Rebuild nodeEdges for filtered data
+                virtualListFullData.forEach(item => {
+                    if (item.type === 'edge') {
+                        if (!nodeEdges.has(item.from)) {
+                            nodeEdges.set(item.from, []);
+                        }
+                        nodeEdges.get(item.from).push(item);
+                    }
+                });
+                if(virtualListTableContainer) virtualListTableContainer.scrollTop = 0;
+                handleVirtualScroll();
             }
         });
+
+        // Delegated event listener for table content (edge targets and metadata toggles)
+        const memoryTable = document.getElementById('memoryTable');
+        if (memoryTable) {
+            memoryTable.addEventListener('click', (event) => {
+                const target = event.target;
+
+                // Handle .edge-target clicks
+                if (target.classList.contains('edge-target') || target.closest('.edge-target')) {
+                    const edgeTargetElement = target.classList.contains('edge-target') ? target : target.closest('.edge-target');
+                    const nodeName = edgeTargetElement.dataset.node;
+                    if (nodeName) {
+                        const tbody = memoryTable.querySelector('tbody');
+                        const nodeRow = [...tbody.rows].find(row => {
+                            // Assuming node name is in the second cell (index 1)
+                            // and we need to find the text content directly or within the first child (e.g. a div)
+                            const nameCellContent = row.cells[1]?.firstChild?.textContent || row.cells[1]?.textContent;
+                            return nameCellContent?.trim() === nodeName;
+                        });
+                        if (nodeRow) {
+                            nodeRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            nodeRow.style.backgroundColor = '#fff2cc'; // Highlight color
+                            setTimeout(() => {
+                                nodeRow.style.backgroundColor = ''; // Remove highlight
+                            }, 2000);
+                        }
+                    }
+                }
+
+                // Handle .expand-button clicks for metadata
+                if (target.classList.contains('expand-button') && target.dataset.action === 'toggle-metadata') {
+                    const metadataHeader = target.closest('.metadata-header');
+                    if (metadataHeader) {
+                        // The metadataContentContainer is the next sibling of metadataHeader
+                        const metadataContentContainer = metadataHeader.nextElementSibling;
+                        if (metadataContentContainer) {
+                            const grid = metadataContentContainer.querySelector('.metadata-grid');
+                            if (grid) {
+                                const isExpanded = grid.style.display !== 'none';
+                                grid.style.display = isExpanded ? 'none' : 'grid';
+                                target.textContent = isExpanded ? 'Show Metadata' : 'Hide Metadata';
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
 
     // --- Initialization ---
@@ -930,8 +1219,15 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
             showToast('Error accessing stored file: ' + error.message, 'error');
         }
 
-        ui.setupEditor();
         setupEventListeners();
+
+        // Setup scroll listener for virtual list
+        virtualListTableContainer = document.querySelector('.table-container');
+        if (virtualListTableContainer) {
+            virtualListTableContainer.addEventListener('scroll', throttle(handleVirtualScroll, 100));
+        } else {
+            console.error(".table-container not found for virtual scroll listener.");
+        }
     }
 
     // --- Start the application ---

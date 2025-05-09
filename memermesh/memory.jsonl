@@ -10,5 +10,6 @@
 {"type":"node","name":"临时地点","nodeType":"location","metadata":["name: 临时地点","type: 区域","description: 一个临时存在的区域","status: 普通"]}
 {"type":"node","name":"酒馆","nodeType":"location","metadata":["name: 酒馆","type: 建筑","description: 一个热闹的酒馆，冒险者们喜欢在这里聚集。","status: 喧闹"]}
 {"type":"node","name":"月光林地","nodeType":"location","metadata":["name: 月光林地","type: 森林","description: 一片被月光永久照耀的神秘森林。","status: 魔法"]}
+{"type":"node","name":"测试区","nodeType":"location","metadata":["name: 测试区","type: 特殊区域","description: 专用于测试的区域","status: 稳定"]}
 {"type":"edge","from":"金币","to":"冒险者","edgeType":"owned_by"}
 {"type":"edge","from":"冒险者_inventory","to":"冒险者","edgeType":"owned_by"}
