@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Memory Viewer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
     <style>
         /* --- Base Styles --- */
         :root {
@@ -356,6 +357,38 @@
             }
         }
 
+        /* --- Loading Indicator --- */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.85); /* Slightly more opaque */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: var(--gray-700);
+            font-size: 1.1rem;
+        }
+
+        .loading-spinner {
+            border: 6px solid var(--gray-200);
+            border-top: 6px solid var(--primary);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         /* --- Search and Filter --- */
         .search-container {
             display: flex;
@@ -407,6 +440,94 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Graph View Container Style */
+        #graphViewContainer {
+            width: 100%;
+            height: 75vh; /* Adjust as needed */
+            border: 1px solid var(--gray-300);
+            background-color: var(--gray-50); /* Light background for the graph area */
+            border-radius: 0.25rem;
+            margin-top: 1rem; /* Add some space if tabs are directly above */
+        }
+
+        /* --- Modal Styles --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black overlay */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000; /* High z-index to ensure it's on top */
+            padding: 1rem; /* Padding for smaller screens */
+            box-sizing: border-box;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 1.5rem 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            width: 90%; /* Responsive width */
+            max-width: 700px; /* Max width for larger screens */
+            max-height: 85vh; /* Max height to prevent overflow on short screens */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Prevent content from breaking out before scroll is applied */
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--gray-200);
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            flex-shrink: 0; /* Prevent header from shrinking */
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.25rem; /* Slightly smaller for modal context */
+            color: var(--gray-800);
+            font-weight: 600;
+        }
+
+        .modal-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.75rem; /* Adjust size */
+            font-weight: bold;
+            color: var(--gray-400); /* Softer color */
+            cursor: pointer;
+            padding: 0.25rem 0.5rem; /* Make it easier to click */
+            line-height: 1;
+            transition: color 0.2s ease;
+        }
+        .modal-close-btn:hover {
+            color: var(--gray-700);
+        }
+
+        .modal-body {
+            overflow-y: auto; /* Enable vertical scrolling for content */
+            flex-grow: 1; /* Allow body to take available space */
+        }
+
+        .modal-body pre {
+            background-color: var(--gray-50);
+            padding: 1rem;
+            border-radius: 0.25rem;
+            border: 1px solid var(--gray-200);
+            white-space: pre-wrap; /* Wrap long lines of text */
+            word-break: break-all; /* Break long words or strings to prevent overflow */
+            font-size: 0.875rem; /* Standard code/data font size */
+            color: var(--gray-700);
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
@@ -443,6 +564,7 @@
 <!-- Tabs -->
 <div class="tabs">
     <button class="tab active" data-tab="table">Table View</button>
+    <button class="tab" data-tab="graph">Graph View</button>
 </div>
 
 <!-- Table View -->
@@ -473,6 +595,31 @@
     </div>
 </div>
 
+<!-- Graph View -->
+<div id="graphView" class="tab-content">
+    <p>Select a node in the Table View to visualize its connections, or implement a search/selection method here.</p>
+    <div id="graphViewContainer"></div>
+</div>
+
+<!-- Loading Indicator HTML (initially hidden) -->
+<div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="loading-spinner"></div>
+    <p>Loading data, please wait...</p>
+</div>
+
+<!-- Node Details Modal -->
+<div id="nodeDetailsModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="nodeDetailsModalTitle">Node Details</h2>
+            <button id="nodeDetailsModalCloseBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <pre id="nodeDetailsModalData"></pre>
+        </div>
+    </div>
+</div>
+
 <script>
     // --- Constants and State ---
     const DB_NAME = 'MemoryViewerDB';
@@ -492,74 +639,7 @@
     let virtualListScrollPaddingTop = null; // Element for top padding
     let virtualListScrollPaddingBottom = null; // Element for bottom padding
     let nodeEdges = new Map(); // New: For mapping nodes to their edges
-
-    // --- Worker Script (parser.worker.js content as a string) ---
-    const workerScriptContent = `
-    self.onmessage = async function(e) {
-        const fileOrContent = e.data; // Can be File object or raw text content
-
-        try {
-            let contentText;
-            if (fileOrContent instanceof File) {
-                contentText = await fileOrContent.text();
-            } else if (typeof fileOrContent === 'string') {
-                contentText = fileOrContent;
-            } else {
-                self.postMessage({ error: 'Invalid data type received by worker.' });
-                return;
-            }
-
-            const lines = contentText.split('\\n');
-            const jsonObjects = lines
-                .filter(line => line.trim() !== '')
-                .map(line => {
-                    try {
-                        return JSON.parse(line);
-                    } catch (parseError) {
-                        // console.error('Error parsing line in worker:', line, parseError);
-                        // Send an error back or a special object for the problematic line
-                        self.postMessage({ error: 'Error parsing line', details: line.substring(0, 100) + (line.length > 100 ? '...' : '') });
-                        return null; // Or some indicator of an error
-                    }
-                })
-                .filter(obj => obj !== null); // Filter out lines that failed to parse
-
-            self.postMessage({ success: true, data: jsonObjects });
-        } catch (error) {
-            self.postMessage({ error: error.message });
-        }
-    };
-    `;
-
-    try {
-        const blob = new Blob([workerScriptContent], { type: 'application/javascript' });
-        parserWorker = new Worker(URL.createObjectURL(blob));
-
-        parserWorker.onmessage = function(e) {
-            // Handle messages from worker
-            // TODO: Add UI loading state management (disable on message/error)
-            if (e.data.error) {
-                showToast('Error in worker: ' + e.data.error + (e.data.details ? ` (Line: ${e.data.details})` : ''), 'error');
-            } else if (e.data.success) {
-                currentData = e.data.data;
-                updateViews(currentData); // Existing function to update UI
-                showToast('Memory file processed by worker successfully!', 'success');
-            }
-        };
-
-        parserWorker.onerror = function(error) {
-            // TODO: Add UI loading state management (disable on error)
-            showToast('Worker error: ' + error.message, 'error');
-            console.error('Worker error:', error);
-            // Fallback or disable worker usage if persistent errors occur
-            parserWorker = null; 
-            showToast('Parser worker failed. Subsequent loads will use main thread.', 'warning');
-        };
-    } catch (error) {
-        showToast('Failed to initialize parser worker. Parsing will occur on main thread.', 'warning');
-        console.error('Worker initialization failed:', error);
-        parserWorker = null; // Fallback to main thread parsing if worker init fails
-    }
+    let cy = null; // Global Cytoscape instance holder (though graphManager.instance is preferred)
 
     // --- Utility Functions ---
     function showToast(message, type = 'success', duration = 3000) {
@@ -569,6 +649,20 @@
         toast.textContent = message;
         toastContainer.appendChild(toast);
         setTimeout(() => toast.remove(), duration + 1000);
+    }
+
+    function showLoadingIndicator() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.style.display = 'flex';
+        }
+    }
+
+    function hideLoadingIndicator() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
     }
 
     function throttle(func, limit) {
@@ -629,6 +723,78 @@
         return container;
     }
 
+    // --- Worker Script (parser.worker.js content as a string) ---
+    const workerScriptContent = `
+    self.onmessage = async function(e) {
+        const fileOrContent = e.data; // Can be File object or raw text content
+
+        try {
+            let contentText;
+            if (fileOrContent instanceof File) {
+                contentText = await fileOrContent.text();
+            } else if (typeof fileOrContent === 'string') {
+                contentText = fileOrContent;
+            } else {
+                self.postMessage({ error: 'Invalid data type received by worker.' });
+                return;
+            }
+
+            const lines = contentText.split('\\n');
+            const jsonObjects = lines
+                .filter(line => line.trim() !== '')
+                .map(line => {
+                    try {
+                        return JSON.parse(line);
+                    } catch (parseError) {
+                        // console.error('Error parsing line in worker:', line, parseError);
+                        // Send an error back or a special object for the problematic line
+                        self.postMessage({ error: 'Error parsing line', details: line.substring(0, 100) + (line.length > 100 ? '...' : '') });
+                        return null; // Or some indicator of an error
+                    }
+                })
+                .filter(obj => obj !== null); // Filter out lines that failed to parse
+
+            self.postMessage({ success: true, data: jsonObjects });
+        } catch (error) {
+            self.postMessage({ error: error.message });
+        }
+    };
+    `;
+
+    try {
+        const blob = new Blob([workerScriptContent], { type: 'application/javascript' });
+        parserWorker = new Worker(URL.createObjectURL(blob));
+
+        parserWorker.onmessage = function(e) {
+            // Handle messages from worker
+            // TODO: Add UI loading state management (disable on message/error)
+            if (e.data.error) {
+                showToast('Error in worker: ' + e.data.error + (e.data.details ? ` (Line: ${e.data.details})` : ''), 'error');
+                hideLoadingIndicator();
+            } else if (e.data.success) {
+                currentData = e.data.data;
+                updateViews(currentData); // Existing function to update UI
+                showToast('Memory file processed by worker successfully!', 'success');
+                hideLoadingIndicator();
+            }
+        };
+
+        parserWorker.onerror = function(error) {
+            // TODO: Add UI loading state management (disable on error)
+            showToast('Worker error: ' + error.message, 'error');
+            console.error('Worker error:', error);
+            // Fallback or disable worker usage if persistent errors occur
+            parserWorker = null; 
+            showToast('Parser worker failed. Subsequent loads will use main thread.', 'warning');
+            hideLoadingIndicator();
+        };
+    } catch (error) {
+        showToast('Failed to initialize parser worker. Parsing will occur on main thread.', 'warning');
+        console.error('Worker initialization failed:', error);
+        parserWorker = null; // Fallback to main thread parsing if worker init fails
+        hideLoadingIndicator(); // Hide if worker init itself fails
+    }
+
     // --- IndexedDB Operations ---
     const idb = {
         initDB: async () => {
@@ -649,7 +815,7 @@
         },
         saveFileHandle: async (handle) => {
             return new Promise((resolve, reject) => {
-const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
                 const store = transaction.objectStore(STORE_NAME);
                 const request = store.put(handle, 'memoryFile');
                 request.onsuccess = () => resolve();
@@ -705,6 +871,7 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
                 if (error.name !== 'AbortError') {
                     showToast('Error selecting file: ' + error.message, 'error');
                 }
+                hideLoadingIndicator(); // Ensure hidden if selectFile itself errors before loadFile
             }
         },
         loadFile: async () => {
@@ -712,8 +879,7 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
                 showToast('Please select a memory file first', 'error');
                 return;
             }
-            // TODO: Add UI loading state management (enable on load start)
-            showToast('Loading and processing file...', 'success'); // Simple loading indicator
+            showLoadingIndicator(); // Show when loading starts
 
             try {
                 const file = await fileHandle.getFile();
@@ -740,11 +906,11 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
                     currentData = jsonObjects;
                     updateViews(currentData);
                     showToast('Memory file loaded (main thread) successfully!', 'success');
-                    // TODO: Add UI loading state management (disable for main thread path)
+                    hideLoadingIndicator();
                 }
             } catch (error) {
                 showToast('Error loading memory file: ' + error.message, 'error');
-                // TODO: Add UI loading state management (disable on error)
+                hideLoadingIndicator();
             }
         }
     };
@@ -862,14 +1028,22 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
             // 2. Name/From column
             const nameCell = document.createElement('td');
             if (item.type === 'node') {
-                nameCell.textContent = item.name; 
+                // Create a clickable span for the node name
+                const nodeNameSpan = document.createElement('span');
+                nodeNameSpan.textContent = item.name;
+                nodeNameSpan.style.cursor = 'pointer';
+                nodeNameSpan.style.color = 'var(--primary-dark)';
+                nodeNameSpan.style.fontWeight = '500';
+                nodeNameSpan.title = `Click to view '${item.name}' in graph`;
+                nodeNameSpan.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent other row/cell clicks if any
+                    graphManager.renderGraph(item.name);
+                });
+                nameCell.appendChild(nodeNameSpan);
+
                 const edges = nodeEdges.get(item.name); 
                 if (edges && edges.length > 0) {
-                    nameCell.innerHTML = ''; 
-                    const nodeNameSpan = document.createElement('span'); 
-                    nodeNameSpan.textContent = item.name;
-                    nameCell.appendChild(nodeNameSpan);
-
+                    // Existing edge display logic (appends to nameCell after nodeNameSpan)
                     const edgeLinkContainer = document.createElement('div'); 
                     edgeLinkContainer.style.marginTop = '0.25rem'; 
                     const edgeLink = document.createElement('a');
@@ -884,10 +1058,21 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
                     edges.forEach(edge => {
                         const edgeItemElement = document.createElement('div');
                         edgeItemElement.className = 'edge-item';
-                        edgeItemElement.innerHTML = `
-                            <span class="edge-type">${edge.edgeType}</span>
-                            <span class="edge-target" data-node="${edge.to}">→ ${edge.to}</span>
-                        `;
+                        // Make the target node in the dropdown also clickable for graph view
+                        const targetNodeSpan = document.createElement('span');
+                        targetNodeSpan.className = 'edge-target'; // Keep for existing scroll behavior
+                        targetNodeSpan.dataset.node = edge.to;
+                        targetNodeSpan.textContent = `→ ${edge.to}`;
+                        targetNodeSpan.style.cursor = 'pointer';
+                        targetNodeSpan.style.color = 'var(--primary-dark)';
+                        targetNodeSpan.title = `Click to view '${edge.to}' in graph (also scrolls in table)`;
+                        targetNodeSpan.addEventListener('click', (e) => {
+                            // No stopPropagation() here to allow table's delegated listener to scroll
+                            graphManager.renderGraph(edge.to);
+                        });
+
+                        edgeItemElement.innerHTML = `<span class="edge-type">${edge.edgeType}</span> `;
+                        edgeItemElement.appendChild(targetNodeSpan);
                         edgeList.appendChild(edgeItemElement);
                     });
                     
@@ -900,7 +1085,18 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
                     nameCell.appendChild(edgeList);
                 }
             } else if (item.type === 'edge') {
-                nameCell.textContent = item.from;
+                // Create a clickable span for the 'from' node name
+                const fromNodeSpan = document.createElement('span');
+                fromNodeSpan.textContent = item.from;
+                fromNodeSpan.style.cursor = 'pointer';
+                fromNodeSpan.style.color = 'var(--primary-dark)';
+                fromNodeSpan.style.fontWeight = '500';
+                fromNodeSpan.title = `Click to view '${item.from}' in graph`;
+                fromNodeSpan.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    graphManager.renderGraph(item.from);
+                });
+                nameCell.appendChild(fromNodeSpan);
             }
             row.appendChild(nameCell);
 
@@ -910,9 +1106,18 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
                 nodeTypeCell.textContent = item.nodeType;
             } else if (item.type === 'edge') {
                 const toNodeSpan = document.createElement('span');
-                toNodeSpan.className = 'edge-target'; 
+                toNodeSpan.className = 'edge-target'; // Keep for existing scroll functionality
                 toNodeSpan.dataset.node = item.to;
                 toNodeSpan.textContent = item.to;
+                // Add graph click functionality & styling
+                toNodeSpan.style.cursor = 'pointer'; 
+                toNodeSpan.style.color = 'var(--primary-dark)'; 
+                toNodeSpan.style.fontWeight = '500';
+                toNodeSpan.title = `Click to view '${item.to}' in graph (also scrolls in table)`;
+                toNodeSpan.addEventListener('click', (e) => {
+                    // No stopPropagation() to allow table's delegated listener to scroll
+                    graphManager.renderGraph(item.to);
+                });
                 nodeTypeCell.appendChild(toNodeSpan);
             }
             row.appendChild(nodeTypeCell);
@@ -1014,6 +1219,255 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
             const activeTabContent = document.getElementById(`${tabName}View`);
             if (activeTabContent) activeTabContent.classList.add('active');
         },
+
+        showNodeDetailsModal: function(nodeRawData) {
+            const modal = document.getElementById('nodeDetailsModal');
+            const titleElement = document.getElementById('nodeDetailsModalTitle');
+            const dataElement = document.getElementById('nodeDetailsModalData');
+
+            if (modal && titleElement && dataElement) {
+                titleElement.textContent = nodeRawData && nodeRawData.name ? `Details: ${nodeRawData.name}` : 'Node Details';
+                dataElement.textContent = JSON.stringify(nodeRawData, null, 2); // Pretty print JSON
+                modal.style.display = 'flex';
+            }
+        },
+
+        hideNodeDetailsModal: function() {
+            const modal = document.getElementById('nodeDetailsModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+    };
+
+    // --- Graph Manager ---
+    const graphManager = {
+        containerId: 'graphViewContainer',
+        instance: null, 
+
+        init: function() {
+            const container = document.getElementById(this.containerId);
+            if (!container) {
+                console.error('Graph container not found:', this.containerId);
+                // utils.showToast('Graph container element not found!', 'error'); // Ensure utils is accessible or remove
+                return;
+            }
+
+            // Get computed CSS variable values
+            const computedStyles = getComputedStyle(document.documentElement);
+            const primaryLight = computedStyles.getPropertyValue('--primary-light').trim();
+            const primary = computedStyles.getPropertyValue('--primary').trim();
+            const gray800 = computedStyles.getPropertyValue('--gray-800').trim();
+            const success = computedStyles.getPropertyValue('--success').trim();
+            const warning = computedStyles.getPropertyValue('--warning').trim();
+            const gray400 = computedStyles.getPropertyValue('--gray-400').trim();
+            const gray700 = computedStyles.getPropertyValue('--gray-700').trim();
+            const gray50 = computedStyles.getPropertyValue('--gray-50').trim();
+
+            try {
+                this.instance = cytoscape({
+                    container: container,
+                    style: [
+                        {
+                            selector: 'node',
+                            style: {
+                                'background-color': primaryLight,
+                                'border-color': primary,
+                                'border-width': '2px',
+                                'label': 'data(label)', 
+                                'width': 'mapData(metadataCount, 0, 20, 40, 100)', 
+                                'height': 'mapData(metadataCount, 0, 20, 40, 100)',
+                                'font-size': '10px',
+                                'color': gray800,
+                                'text-valign': 'bottom',
+                                'text-halign': 'center',
+                                'text-margin-y': '5px',
+                                'text-wrap': 'wrap',
+                                'text-max-width': '80px'
+                            }
+                        },
+                        {
+                            selector: 'node[type="player_character"]',
+                            style: { 'background-color': success }
+                        },
+                        {
+                            selector: 'node[type="location"]',
+                            style: { 'background-color': warning }
+                        },
+                        {
+                            selector: 'edge',
+                            style: {
+                                'width': 2,
+                                'line-color': gray400,
+                                'target-arrow-color': gray400,
+                                'target-arrow-shape': 'triangle',
+                                'curve-style': 'bezier',
+                                'label': 'data(label)',
+                                'font-size': '9px',
+                                'color': gray700,
+                                'text-rotation': 'autorotate',
+                                'text-background-color': gray50,
+                                'text-background-opacity': 0.7,
+                                'text-background-padding': '2px'
+                            }
+                        }
+                    ],
+                    layout: {
+                        name: 'grid' 
+                    }
+                });
+                // console.log('Cytoscape initialized with resolved CSS variables');
+
+                // Add tap listener for nodes in the graph
+                this.instance.on('tap', 'node', (evt) => {
+                    const clickedNodeData = evt.target.data('raw');
+                    if (clickedNodeData) {
+                        ui.showNodeDetailsModal(clickedNodeData);
+                    }
+                });
+
+            } catch (e) {
+                console.error("Cytoscape initialization error:", e);
+                // utils.showToast("Error initializing graph view.", "error"); // Ensure utils is accessible or remove
+            }
+        },
+
+        transformDataForCytoscape: function(centerNodeName, depth = 1) {
+            if (!currentData) return { nodes: [], edges: [] };
+
+            const cyNodesMap = new Map();
+            const cyEdgesMap = new Map();
+            const queue = [{ name: centerNodeName, currentDepth: 0 }];
+            const visitedNodes = new Set();
+
+            if (!currentData.find(n => n.type === 'node' && n.name === centerNodeName)){
+                // console.warn(`Center node ${centerNodeName} not found in currentData.`);
+                return { nodes: [], edges: [] };
+            }
+
+            while (queue.length > 0) {
+                const currentEntry = queue.shift();
+                const currentNodeName = currentEntry.name;
+                const currentDepth = currentEntry.currentDepth;
+
+                if (visitedNodes.has(currentNodeName) && currentNodeName !== centerNodeName) continue;
+                visitedNodes.add(currentNodeName);
+
+                const nodeData = currentData.find(n => n.type === 'node' && n.name === currentNodeName);
+                if (nodeData && !cyNodesMap.has(currentNodeName)) {
+                    cyNodesMap.set(currentNodeName, {
+                        data: {
+                            id: currentNodeName,
+                            label: `${nodeData.nodeType ? nodeData.nodeType : 'Unknown Type'}\n(${currentNodeName ? currentNodeName : 'Unknown Name'})`, 
+                            type: nodeData.nodeType,
+                            raw: nodeData,
+                            metadataCount: nodeData.metadata ? nodeData.metadata.length : 0
+                        }
+                    });
+                }
+
+                if (currentDepth >= depth) continue; 
+
+                currentData.forEach(item => { 
+                    if (item.type === 'edge') {
+                        let neighborName = null;
+                        if (item.from === currentNodeName) {
+                            neighborName = item.to;
+                        } else if (item.to === currentNodeName) {
+                            neighborName = item.from;
+                        }
+
+                        if (neighborName) {
+                            const edgeId = `${item.from}->${item.to}|${item.edgeType}_${Math.random().toString(36).substr(2, 5)}`; 
+                            if (!cyEdgesMap.has(edgeId)) {
+                                cyEdgesMap.set(edgeId, { data: { id: edgeId, source: item.from, target: item.to, label: item.edgeType, raw: item } });
+                            }
+
+                            if (!visitedNodes.has(neighborName)) {
+                                queue.push({ name: neighborName, currentDepth: currentDepth + 1 });
+                            }
+                            
+                            if (!cyNodesMap.has(neighborName)){
+                                const neighborNodeData = currentData.find(n => n.type === 'node' && n.name === neighborName); 
+                                if(neighborNodeData){
+                                    // console.log('Neighbor Name:', neighborName, typeof neighborName);
+                                    // console.log('Neighbor Type:', neighborNodeData.nodeType, typeof neighborNodeData.nodeType);
+                                    cyNodesMap.set(neighborName, {
+                                        data: {
+                                            id: neighborName,
+                                            label: `${neighborNodeData.nodeType ? neighborNodeData.nodeType : 'Unknown Type'}\n(${neighborName ? neighborName : 'Unknown Name'})`,
+                                            type: neighborNodeData.nodeType,
+                                            raw: neighborNodeData,
+                                            metadataCount: neighborNodeData.metadata ? neighborNodeData.metadata.length : 0
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            return { nodes: Array.from(cyNodesMap.values()), edges: Array.from(cyEdgesMap.values()) };
+        },
+
+        renderGraph: function(nodeName, depth = 1) {
+            if (!this.instance) {
+                console.warn('Cytoscape instance not initialized. Attempting to initialize now.');
+                this.init(); 
+                if(!this.instance) {
+                    utils.showToast("Graph display could not be initialized.", "error");
+                    return;
+                }
+            }
+            
+            ui.switchTab('graph'); 
+
+            const graphData = this.transformDataForCytoscape(nodeName, depth);
+
+            if (graphData.nodes.length === 0 && nodeName) {
+                utils.showToast(`Node "${nodeName}" not found or no connected data for graph.`, 'warning');
+                this.instance.elements().remove(); 
+                return;
+            }
+            if (graphData.nodes.length === 0 && !nodeName) {
+                this.instance.elements().remove(); 
+                return; // No node name provided, clear graph
+            }
+            
+            this.instance.elements().remove(); // Clear previous elements before adding new ones
+            this.instance.add(graphData); // Add new elements
+            
+            this.instance.layout({
+                name: 'cose',
+                idealEdgeLength: () => 120,
+                nodeOverlap: 30,
+                refresh: 30,
+                fit: true,
+                padding: 40,
+                randomize: false,
+                componentSpacing: 150,
+                nodeRepulsion: () => 600000,
+                edgeElasticity: () => 100,
+                nestingFactor: 5,
+                gravity: 100,
+                numIter: 1500,
+                initialTemp: 250,
+                coolingFactor: 0.95,
+                minTemp: 1.0,
+                animate: 'end',
+                animationDuration: 500
+            }).run();
+            
+            // Center and fit after layout run may not be needed if layout has fit:true
+            // this.instance.center();
+            // this.instance.fit();
+        },
+
+        clearGraph: function() {
+            if (this.instance) {
+                this.instance.elements().remove();
+            }
+        }
     };
 
     // --- Event Handlers ---
@@ -1177,6 +1631,22 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
                 }
             });
         }
+
+        // Modal close button listener
+        const modalCloseBtn = document.getElementById('nodeDetailsModalCloseBtn');
+        if (modalCloseBtn) {
+            modalCloseBtn.addEventListener('click', ui.hideNodeDetailsModal);
+        }
+
+        // Optional: Close modal when clicking on the overlay
+        const modalOverlay = document.getElementById('nodeDetailsModal');
+        if (modalOverlay) {
+            modalOverlay.addEventListener('click', function(event) {
+                if (event.target === modalOverlay) { // Only if the overlay itself is clicked
+                    ui.hideNodeDetailsModal();
+                }
+            });
+        }
     }
 
     // --- Initialization ---
@@ -1190,6 +1660,7 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
 
         if (!('showOpenFilePicker' in window)) {
             showToast('Your browser does not support the File System Access API. Please use a modern browser like Chrome or Edge.', 'error', 0);
+            hideLoadingIndicator(); // Ensure hidden if API not supported early
             return;
         }
 
@@ -1203,34 +1674,42 @@ const transaction = db.transaction([STORE_NAME], 'readwrite');
                     await fileSystem.loadFile();
                     showToast('Loaded previously selected file.', 'success');
                 } else {
-                    const requestPermission = await storedHandle.requestPermission({mode: 'read'});
-                    if (requestPermission === 'granted') {
-                        fileHandle = storedHandle;
-                        document.getElementById('filePath').textContent = fileHandle.name;
-                        await fileSystem.loadFile();
-                        showToast('Loaded previously selected file.', 'success');
-                    } else {
-                        await idb.removeFileHandleFromDB();
-                        showToast('Permission to access the previously selected file was denied.', 'error');
-                    }
+                    await idb.removeFileHandleFromDB();
+                    showToast('Permission to access the previously selected file was denied or expired.', 'error');
+                    hideLoadingIndicator(); // Ensure hidden if permission denied for stored handle
                 }
+            } else {
+                hideLoadingIndicator(); // If no stored handle, ensure indicator is hidden
             }
         } catch (error) {
             showToast('Error accessing stored file: ' + error.message, 'error');
+            hideLoadingIndicator(); // Ensure hidden on error with stored handle
         }
 
         setupEventListeners();
+        graphManager.init(); // Initialize Cytoscape
 
-        // Setup scroll listener for virtual list
         virtualListTableContainer = document.querySelector('.table-container');
         if (virtualListTableContainer) {
             virtualListTableContainer.addEventListener('scroll', throttle(handleVirtualScroll, 100));
         } else {
             console.error(".table-container not found for virtual scroll listener.");
         }
+
+        // Final check to ensure loading indicator is hidden if no file was auto-loaded
+        // and no other process is expected to hide it.
+        // This depends on the exact flow of an auto-load attempt.
+        // If fileHandle is null here, it means no file was auto-loaded.
+        if (!fileHandle) {
+            hideLoadingIndicator();
+        }
     }
 
     // --- Start the application ---
+    // Show loading indicator briefly during initial setup if needed, then hide in initialize().
+    // For now, we'll assume initialize() is quick enough or handles its own indicators for async parts.
+    // Initial call to hide ensures it's not visible if nothing auto-loads.
+    hideLoadingIndicator();
     initialize();
 </script>
 </body>
