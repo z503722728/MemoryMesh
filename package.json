@@ -1,11 +1,11 @@
 {
-  "name": "memorymesh",
-  "version": "0.2.8",
+  "name": "@z503722728/memorymesh",
+  "version": "0.2.11",
   "description": "An MCP server that uses a knowledge graph to store and recall structured memory for AI models",
   "license": "MIT",
-  "author": "CheMiguel23",
-  "homepage": "https://github.com/CheMiguel23/memorymesh",
-  "bugs": "https://github.com/CheMiguel23/memorymesh/issues",
+  "author": "z503722728",
+  "homepage": "https://github.com/z503722728/memorymesh",
+  "bugs": "https://github.com/z503722728/memorymesh/issues",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
