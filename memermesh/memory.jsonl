@@ -1,15 +1,5 @@
-{"type":"node","name":"新手村","nodeType":"location","metadata":["name: 新手村","type: 村庄","description: 一个宁静祥和的小村庄，是冒险者们旅程的起点。","status: 和平"]}
-{"type":"node","name":"冒险者","nodeType":"player_character","metadata":["name: 冒险者","age: 20","gender: 未知","occupation: 冒险者","status: 健康","description: 一位充满潜力的新晋冒险者。"]}
-{"type":"node","name":"村长的委托","nodeType":"quest","metadata":["name: 村长的委托","description: 村长似乎有些事情需要帮忙。","status: Active","objectives: 与村长对话","rewards: 少量金币","relatedNPCs: 村长"]}
-{"type":"node","name":"金币","nodeType":"currency","metadata":["name: 金币","quantity: 100","description: 通用的货币","owner: 冒险者"]}
-{"type":"node","name":"冒险者_inventory","nodeType":"inventory","metadata":["name: 冒险者_inventory","items: 破旧的木剑, 新手布衣","owner: 冒险者"]}
-{"type":"node","name":"幽暗森林入口","nodeType":"location","metadata":["name: 幽暗森林入口","type: 区域入口","description: 幽暗森林的入口，光线昏暗，气氛神秘。","status: 平静"]}
-{"type":"node","name":"铁炉堡","nodeType":"location","metadata":["name: 铁炉堡","type: 城市","description: 矮人的宏伟主城，终年炉火不熄。","status: 繁荣"]}
-{"type":"node","name":"魔法高塔","nodeType":"location","metadata":["name: 魔法高塔","type: 塔楼","description: 凡人学习魔法的最高殿堂。","status: 神秘"]}
-{"type":"node","name":"未知洞穴","nodeType":"location","metadata":["name: 未知洞穴","type: 地下城入口","description: 一个深邃、黑暗的洞穴，充满了未知的危险与机遇。","status: 神秘"]}
-{"type":"node","name":"临时地点","nodeType":"location","metadata":["name: 临时地点","type: 区域","description: 一个临时存在的区域","status: 普通"]}
-{"type":"node","name":"酒馆","nodeType":"location","metadata":["name: 酒馆","type: 建筑","description: 一个热闹的酒馆，冒险者们喜欢在这里聚集。","status: 喧闹"]}
-{"type":"node","name":"月光林地","nodeType":"location","metadata":["name: 月光林地","type: 森林","description: 一片被月光永久照耀的神秘森林。","status: 魔法"]}
-{"type":"node","name":"测试区","nodeType":"location","metadata":["name: 测试区","type: 特殊区域","description: 专用于测试的区域","status: 稳定"]}
-{"type":"edge","from":"金币","to":"冒险者","edgeType":"owned_by"}
-{"type":"edge","from":"冒险者_inventory","to":"冒险者","edgeType":"owned_by"}
+{"nodeType":"地点","name":"宁静村","metadata":["一个坐落在青山脚下，祥和宁静的小村庄。","村中心有一口古井","村子周围有农田环绕","大小: 小型","状态: 和平"],"type":"node"}
+{"name":"低语森林","nodeType":"地点","metadata":["一片古老而神秘的森林，据说林中深处隐藏着不为人知的秘密。","树木高耸入云，遮天蔽日","林间小径蜿蜒曲折","危险等级: 低至中等","状态: 中立","父地点: 宁静村附近地区"],"type":"node"}
+{"name":"回音洞穴","metadata":["一个阴暗潮湿的洞穴，洞口吹出的风带着奇怪的回声。","洞内布满钟乳石和石笋","深处似乎有微弱的光芒","危险等级: 中等","状态: 未知","父地点: 低语森林深处"],"nodeType":"地点","type":"node"}
+{"type":"node","name":"测试神殿","nodeType":"location","metadata":["name: 测试神殿","type: 神殿","description: 一个神秘的，用于测试的神殿。","status: 存在"]}
+{"type":"node","name":"水晶洞窟","nodeType":"location","metadata":["Name: 水晶洞窟","Type: 洞穴","Description: 一个隐藏在山腹中的洞穴，洞壁上长满了五彩斑斓的水晶。","Status: 神秘","Dangerlevel: 中等","Notablefeatures: 深处有潺潺水声"]}

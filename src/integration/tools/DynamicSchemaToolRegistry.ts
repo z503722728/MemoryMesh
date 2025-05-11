@@ -207,20 +207,32 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
                         // Optional: Add individual item validation against singleEntitySchemaDefinition.inputSchema if needed
                         // const validationError = validate(itemData, singleEntitySchemaDefinition.inputSchema); if(validationError) ...
 
-                        // Check for existing node before creating, if desired for batch (can be configurable)
-                        if (itemData.name) {
-                            const existingNodes = await knowledgeGraphManager.openNodes([itemData.name]);
+                        // Extract actual entity data, assuming it's nested under a key like 'location' (singularSchemaName)
+                        const actualEntityData = itemData[singularSchemaName];
+
+                        if (!actualEntityData || typeof actualEntityData !== 'object') {
+                            console.error(`[BatchAdd] Invalid or missing nested entity data for key '${singularSchemaName}' in item:`, itemData);
+                            // Potentially add to an errors list and continue to the next item
+                            // For now, we'll skip this item if the expected nested structure isn't found.
+                            continue;
+                        }
+
+                        // Check for existing node before creating, using the name from actualEntityData
+                        if (actualEntityData.name) {
+                            const existingNodes = await knowledgeGraphManager.openNodes([actualEntityData.name]);
                             if (existingNodes.nodes.length > 0) {
                                 // Decide error handling: fail whole batch, or skip and report, or overwrite (not implemented here)
-                                console.warn(`[BatchAdd] Node already exists and will be skipped: ${itemData.name}`);
-                                // Or: throw new Error(`Node already exists in batch: ${itemData.name}`);
+                                console.warn(`[BatchAdd] Node already exists and will be skipped: ${actualEntityData.name}`);
+                                // Or: throw new Error(`Node already exists in batch: ${actualEntityData.name}`);
                                 continue; // Skip this item
                             }
                         }
-                        const {nodes, edges} = await createSchemaNode(itemData, singleEntitySchemaDefinition, singularSchemaName);
+                        // Use actualEntityData when calling createSchemaNode
+                        const {nodes, edges} = await createSchemaNode(actualEntityData, singleEntitySchemaDefinition, singularSchemaName);
                         allNodesToAdd.push(...nodes);
                         allEdgesToAdd.push(...edges);
-                        addedItemNames.push(itemData.name || 'unnamed_item');
+                        // Use actualEntityData.name for addedItemNames
+                        addedItemNames.push(actualEntityData.name || 'unnamed_item');
                     }
 
                     if (allNodesToAdd.length === 0 && allEdgesToAdd.length === 0 && addedItemNames.length > 0) {
@@ -270,19 +282,34 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
                     const updateResults = [];
                     const updateErrors = [];
 
-                    // For batch updates, atomicity is complex if handleSchemaUpdate is atomic per item.
-                    // If full batch atomicity is required, handleSchemaUpdate would need to be refactored
-                    // or all calls wrapped in a larger transaction here, with careful error handling.
-                    for (const updateItem of updatesToPerform) {
-                        // Optional: Validate updateItem against singleUpdateSchemaDefinition.inputSchema
-                        // Ensure 'name' or identifier is present in updateItem
-                        if (!updateItem.name) {
-                            updateErrors.push({item: updateItem, error: `Missing 'name' for update.`});
+                    for (const updateItemContainer of updatesToPerform) { // Renamed for clarity
+                        // The actual update data (including name and fields to change) is nested.
+                        // The key for this nesting is `update_${singularSchemaName}` based on typical Python tool structure,
+                        // or simply `singularSchemaName` if the update tool schema directly uses that.
+                        // Given the Python tools often have a structure like `updates: [{ "update_entity": { ... } }]`,
+                        // we should try to find the relevant nested object.
+                        // Let's assume the key is `singularSchemaName` or `update_${singularSchemaName}` from the args structure.
+                        // For `mcp_memorymesh_update_locations`, args.updates is an array of `McpMemorymeshUpdateLocationsUpdates`,
+                        // and each of those has an `update_location` field of type `McpMemorymeshUpdateLocationsUpdatesUpdateLocation`.
+                        // So, `singularSchemaName` is 'location'. The key in `updateItemContainer` is `update_location`.
+
+                        const actualUpdateData = updateItemContainer[`update_${singularSchemaName}`]; // e.g., updateItemContainer['update_location']
+
+                        if (!actualUpdateData || typeof actualUpdateData !== 'object') {
+                            updateErrors.push({item: updateItemContainer, error: `Invalid or missing nested update data object under key 'update_${singularSchemaName}'.`});
                             continue;
                         }
+
+                        // Ensure 'name' or identifier is present in actualUpdateData
+                        if (!actualUpdateData.name) {
+                            updateErrors.push({item: actualUpdateData, error: `Missing 'name' for update within the nested update data.`});
+                            continue;
+                        }
+
                         try {
+                            // Pass actualUpdateData to handleSchemaUpdate
                             const result = await handleSchemaUpdate(
-                                updateItem, // This contains the identifier (e.g. name) and fields to update
+                                actualUpdateData, // This contains the identifier (e.g. name) and fields to update
                                 singleUpdateSchemaDefinition, // Pass the schema for a single update operation
                                 singularSchemaName,
                                 knowledgeGraphManager
@@ -295,13 +322,13 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
                                         extractedErrorMessage = firstTextContent.text;
                                     }
                                 }
-                                const errorMessage = extractedErrorMessage || `Update failed for ${updateItem.name}. Details unavailable.`;
-                                updateErrors.push({item: updateItem.name, error: errorMessage});
+                                const errorMessage = extractedErrorMessage || `Update failed for ${actualUpdateData.name}. Details unavailable.`;
+                                updateErrors.push({item: actualUpdateData.name, error: errorMessage});
                             } else {
-                                updateResults.push(result.toolResult?.actionTaken || `Updated ${updateItem.name}`);
+                                updateResults.push(result.toolResult?.actionTaken || `Updated ${actualUpdateData.name}`);
                             }
                         } catch (e) {
-                             updateErrors.push({item: updateItem.name, error: e instanceof Error ? e.message: String(e) });
+                             updateErrors.push({item: actualUpdateData.name, error: e instanceof Error ? e.message: String(e) });
                         }
                     }
 
@@ -311,8 +338,7 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
                             failed_updates: updateErrors.length,
                             details: {updated: updateResults, errors: updateErrors}
                         },
-                        actionTaken: `Batch update for ${singularSchemaName}s processed.`
-                    });
+                        actionTaken: `Batch update for ${singularSchemaName}s processed.`                    });
                 }
 
                 case 'delete': {
