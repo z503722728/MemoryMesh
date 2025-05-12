@@ -253,6 +253,14 @@ class DynamicSchemaToolRegistry implements IDynamicSchemaToolRegistry {
                     try {
                         if (allNodesToAdd.length > 0) {
                             await knowledgeGraphManager.addNodes(allNodesToAdd);
+                            // 注册批量回滚动作
+                            const nodeNames = allNodesToAdd.map(node => node.name);
+                            await knowledgeGraphManager.addRollbackAction(
+                                async () => {
+                                    await knowledgeGraphManager.deleteNodes(nodeNames);
+                                },
+                                `Rollback: 批量删除节点 ${nodeNames.join(', ')}`
+                            );
                         }
                         if (allEdgesToAdd.length > 0) {
                             await knowledgeGraphManager.addEdges(allEdgesToAdd);

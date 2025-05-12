@@ -3,3 +3,10 @@
 {"name":"回音洞穴","metadata":["一个阴暗潮湿的洞穴，洞口吹出的风带着奇怪的回声。","洞内布满钟乳石和石笋","深处似乎有微弱的光芒","危险等级: 中等","状态: 未知","父地点: 低语森林深处"],"nodeType":"地点","type":"node"}
 {"type":"node","name":"测试神殿","nodeType":"location","metadata":["name: 测试神殿","type: 神殿","description: 一个神秘的，用于测试的神殿。","status: 存在"]}
 {"type":"node","name":"水晶洞窟","nodeType":"location","metadata":["Name: 水晶洞窟","Type: 洞穴","Description: 一个隐藏在山腹中的洞穴，洞壁上长满了五彩斑斓的水晶。","Status: 神秘","Dangerlevel: 中等","Notablefeatures: 深处有潺潺水声"]}
+{"type":"node","name":"幽影行者","nodeType":"npc","metadata":["name: 幽影行者","role: 探险家","status: 活跃","description: 一个神秘的独行侠","currentLocation: 虚无边境"]}
+{"type":"node","name":"测试村","nodeType":"location","metadata":["name: 测试村","type: 村庄","description: 一个用于测试的安静小村庄。","status: 平静"]}
+{"type":"node","name":"测试森林","nodeType":"location","metadata":["name: 测试森林","type: 森林","description: 一片用于测试的神秘森林。","status: 未知"]}
+{"type":"node","name":"测试村民A","nodeType":"npc","metadata":["name: 测试村民A","role: 村民","status: 在村口","description: 一个用于测试的普通村民。","currentLocation: 测试村"]}
+{"type":"node","name":"测试村民B","nodeType":"npc","metadata":["name: 测试村民B","role: 猎人","status: 在森林边缘","description: 一个用于测试的猎人。","currentLocation: 测试森林"]}
+{"type":"edge","from":"测试村民A","to":"测试村","edgeType":"located_in"}
+{"type":"edge","from":"测试村民B","to":"测试森林","edgeType":"located_in"}
