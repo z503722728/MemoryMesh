@@ -268,6 +268,24 @@ export async function handleSchemaUpdate(
                 fullGraph
             );
 
+            // --- 注册回滚动作 ---
+            await applicationManager.addRollbackAction(
+                async () => {
+                    // 恢复原节点
+                    await applicationManager.updateNodes([node]);
+                    // 恢复被删除的边
+                    if (edgeChanges.remove.length > 0) {
+                        await applicationManager.addEdges(edgeChanges.remove);
+                    }
+                    // 删除新加的边
+                    if (edgeChanges.add.length > 0) {
+                        await applicationManager.deleteEdges(edgeChanges.add);
+                    }
+                },
+                `Rollback: 恢复节点${node.name}及其边`
+            );
+            // --- 回滚动作注册结束 ---
+
             // Update the node first
             const updatedNode: Node = {
                 ...node,

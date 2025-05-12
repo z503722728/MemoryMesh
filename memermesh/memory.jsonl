@@ -8,5 +8,11 @@
 {"type":"node","name":"测试森林","nodeType":"location","metadata":["name: 测试森林","type: 森林","description: 一片用于测试的神秘森林。","status: 未知"]}
 {"type":"node","name":"测试村民A","nodeType":"npc","metadata":["name: 测试村民A","role: 村民","status: 在村口","description: 一个用于测试的普通村民。","currentLocation: 测试村"]}
 {"type":"node","name":"测试村民B","nodeType":"npc","metadata":["name: 测试村民B","role: 猎人","status: 在森林边缘","description: 一个用于测试的猎人。","currentLocation: 测试森林"]}
+{"type":"node","name":"回滚测试村","nodeType":"location","metadata":["name: 回滚测试村","type: 村庄","description: 用于回滚测试的村庄。","status: 平静"]}
+{"type":"node","name":"回滚测试林","nodeType":"location","metadata":["name: 回滚测试林","type: 森林","description: 用于回滚测试的森林。","status: 未知"]}
+{"type":"node","name":"回滚村民","nodeType":"npc","metadata":["name: 回滚村民","role: 村民","status: 在村口","description: 用于回滚测试的村民。","currentLocation: 回滚测试村"]}
+{"type":"node","name":"回滚村民2","nodeType":"npc","metadata":["name: 回滚村民2","role: 村民","status: 在村口","description: 用于delete回滚测试的村民。","currentLocation: 回滚测试村"]}
 {"type":"edge","from":"测试村民A","to":"测试村","edgeType":"located_in"}
 {"type":"edge","from":"测试村民B","to":"测试森林","edgeType":"located_in"}
+{"type":"edge","from":"回滚村民","to":"回滚测试村","edgeType":"located_in"}
+{"type":"edge","from":"回滚村民2","to":"回滚测试村","edgeType":"located_in"}
