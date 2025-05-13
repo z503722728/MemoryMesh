@@ -51,7 +51,7 @@ async function main(): Promise<void> {
 
                 const result = await handleCallToolRequest(toolRequest, knowledgeGraphManager);
 
-                return { content: [{ type: "text", text: JSON.stringify(result.toolResult) }] };
+                return { content: [{ type: "text", text: JSON.stringify(result.toolResult, null, 2) }] };
             } catch (error) {
                 console.error("Error in handleCallToolRequest:", error);
                 const formattedError = formatToolError({
@@ -62,7 +62,7 @@ async function main(): Promise<void> {
                     recoverySteps: ["Adjust the input parameters based on the schema definition."]
                 });
 
-                return { content: [{ type: "text", text: JSON.stringify(formattedError.toolResult) }] };
+                return { content: [{ type: "text", text: JSON.stringify(formattedError.toolResult, null, 2) }] };
             }
         });
 

@@ -12,7 +12,14 @@
 {"type":"node","name":"回滚测试林","nodeType":"location","metadata":["name: 回滚测试林","type: 森林","description: 用于回滚测试的森林。","status: 未知"]}
 {"type":"node","name":"回滚村民","nodeType":"npc","metadata":["name: 回滚村民","role: 村民","status: 在村口","description: 用于回滚测试的村民。","currentLocation: 回滚测试村"]}
 {"type":"node","name":"回滚村民2","nodeType":"npc","metadata":["name: 回滚村民2","role: 村民","status: 在村口","description: 用于delete回滚测试的村民。","currentLocation: 回滚测试村"]}
+{"type":"node","name":"时光沙漏","nodeType":"artifact","metadata":["Name: 时光沙漏","Description: 一只可以倒流时间的神秘沙漏，据说来自远古神话时代。","Type: 魔法道具","Rarity: 神话","Effects: 时间加速, 时间静止, 短暂未来视","Origin: 古代遗迹","Value: 无法估量"]}
+{"type":"node","name":"不死草","nodeType":"artifact","metadata":["Name: 不死草","Description: 一种传说中的仙草，食用后可以治愈任何伤势，甚至可以起死回生。据说百年才能生长一寸，千年才会开花。","Type: 草药","Rarity: 神话","Effects: 治愈伤势, 复活, 延长寿命","Origin: 仙境山谷"]}
+{"type":"node","name":"神秘森林","nodeType":"location","metadata":["Name: 神秘森林","Type: 森林","Description: 一片被魔法保护的远古森林，散发着神秘的蓝光。据说森林深处隐藏着通往异世界的门户。","Status: 平静","Atmosphere: 静谧而神秘","Dangerlevel: 中等","Notablefeatures: 会发光的树木, 奇怪的石阵, 蓝色的小溪","Relatedcharacters: 林正道"]}
+{"type":"node","name":"林正道","nodeType":"npc","metadata":["name: 林正道","role: 林中隐士","status: 健康","description: 神秘森林的看守者，一位白发苍苍的老人，据说已经在这片森林中生活了几百年。精通草药和古老魔法。","currentLocation: 神秘森林"]}
+{"type":"node","name":"森林的秘密","nodeType":"quest","metadata":["name: 森林的秘密","description: 探索神秘森林的深处，找出传说中的异世界之门。","status: Active","objectives: 找到林正道并获取其信任, 收集神秘森林的三种特殊草药, 找到森林深处的石阵, 激活石阵并打开异世界之门","rewards: 不死草一株, 电光炸弹五个, 500金币","relatedNPCs: 林正道","relatedLocations: 神秘森林"]}
 {"type":"edge","from":"测试村民A","to":"测试村","edgeType":"located_in"}
 {"type":"edge","from":"测试村民B","to":"测试森林","edgeType":"located_in"}
 {"type":"edge","from":"回滚村民","to":"回滚测试村","edgeType":"located_in"}
 {"type":"edge","from":"回滚村民2","to":"回滚测试村","edgeType":"located_in"}
+{"type":"edge","from":"林正道","to":"神秘森林","edgeType":"located_in"}
+{"type":"edge","from":"神秘森林","to":"林正道","edgeType":"present_in"}
