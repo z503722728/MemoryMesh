@@ -576,7 +576,7 @@
         </select>
         <select class="filter-select" id="viewFilter">
             <option value="all">所有项目</option>
-            <option value="nodes">仅节点</option>
+            <option value="nodes" selected>仅节点</option>
             <option value="edges">仅关系</option>
         </select>
     </div>
@@ -587,7 +587,6 @@
                     <th>类别</th>
                     <th>名称/源节点</th>
                     <th>节点类型/目标节点</th>
-                    <th>元数据/关系类型</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -615,7 +614,7 @@
             <button id="nodeDetailsModalCloseBtn" class="modal-close-btn">&times;</button>
         </div>
         <div class="modal-body">
-            <pre id="nodeDetailsModalData"></pre>
+            <div id="nodeDetailsModalData"></div>
         </div>
     </div>
 </div>
@@ -640,6 +639,33 @@
     let virtualListScrollPaddingBottom = null; // Element for bottom padding
     let nodeEdges = new Map(); // New: For mapping nodes to their edges
     let cy = null; // Global Cytoscape instance holder (though graphManager.instance is preferred)
+
+    // New: Color Palette and assignment logic for dynamic node type coloring
+    let nodeTypeColorPalette = [
+        '#2ecc71', '#e67e22', '#1abc9c', '#f1c40f', '#3498db', 
+        '#9b59b6', '#e74c3c', '#7f8c8d', '#16a085', '#d35400',
+        '#27ae60', '#c0392b', '#8e44ad', '#2980b9', '#f39c12',
+        '#2c3e50', '#c7ecee', '#ff7f50', '#ff6b81', '#6ab04c',
+        '#4834d4', '#f0932b', '#be2edd', '#1dd1a1', '#54a0ff'
+    ]; // Added more colors
+    let nodeTypeToColorMap = new Map();
+    let colorPaletteIndex = 0;
+
+    function resetNodeTypeColors() {
+        nodeTypeToColorMap.clear();
+        colorPaletteIndex = 0;
+    }
+
+    function getColorForNodeType(nodeType) {
+        if (!nodeType) return null; // Handle undefined/null nodeType
+        if (nodeTypeToColorMap.has(nodeType)) {
+            return nodeTypeToColorMap.get(nodeType);
+        }
+        const color = nodeTypeColorPalette[colorPaletteIndex % nodeTypeColorPalette.length];
+        nodeTypeToColorMap.set(nodeType, color);
+        colorPaletteIndex++;
+        return color;
+    }
 
     // --- Utility Functions ---
     function showToast(message, type = 'success', duration = 3000) {
@@ -1114,35 +1140,13 @@
             }
             row.appendChild(nodeTypeCell);
 
-            // 4. Metadata/EdgeType column
-            const metadataCell = document.createElement('td');
-            if (item.type === 'node' && item.metadata) {
-                const metadataHeader = document.createElement('div');
-                metadataHeader.className = 'metadata-header';
-                const expandButtonHTML = `<button class="expand-button" data-action="toggle-metadata">显示元数据</button>`;
-                const metadataCount = document.createElement('span');
-                metadataCount.className = 'metadata-summary';
-                metadataCount.textContent = `${item.metadata.length} entries`;
-                metadataHeader.innerHTML = expandButtonHTML;
-                metadataHeader.appendChild(metadataCount);
-                
-                const metadataContentContainer = createMetadataDisplay(item.metadata);
-                const metadataGrid = metadataContentContainer.querySelector('.metadata-grid');
-                if(metadataGrid) metadataGrid.style.display = 'none';
-                
-                metadataCell.appendChild(metadataHeader);
-                metadataCell.appendChild(metadataContentContainer);
-            } else if (item.type === 'edge') {
-                metadataCell.textContent = item.edgeType;
-            }
-            row.appendChild(metadataCell);
-
             fragment.appendChild(row);
         }
         virtualListTableBody.insertBefore(fragment, virtualListScrollPaddingBottom);
     }
 
     function updateViews(data) {
+        resetNodeTypeColors(); // Reset colors for new data load
         updateStats(data);
         virtualListFullData = data; 
 
@@ -1155,8 +1159,11 @@
                 nodeEdges.get(item.from).push(item);
             }
         });
-
-        handleVirtualScroll(); 
+        
+        // Apply filters after data is processed and ready to be displayed for the first time
+        // This replaces the individual handleVirtualScroll() call here
+        applyTableFilters(); 
+        // handleVirtualScroll(); // No longer needed here, applyTableFilters will call it
     }
     
     function handleVirtualScroll() {
@@ -1219,7 +1226,68 @@
 
             if (modal && titleElement && dataElement) {
                 titleElement.textContent = nodeRawData && nodeRawData.name ? `详情: ${nodeRawData.name}` : '节点详情';
-                dataElement.textContent = JSON.stringify(nodeRawData, null, 2); // Pretty print JSON
+                
+                let formattedContent = `<div style="white-space: pre-wrap; word-break: break-all;">`;
+                formattedContent += `<strong>基本信息:</strong>\n`;
+                formattedContent += `----------------------------\n`;
+                const coreProperties = ['name', 'type', 'nodeType', 'id', 'timestamp'];
+                
+                for (const key in nodeRawData) {
+                    if (Object.prototype.hasOwnProperty.call(nodeRawData, key)) {
+                        const value = nodeRawData[key];
+                        if (coreProperties.includes(key) || (typeof value !== 'object' && !Array.isArray(value))) {
+                            formattedContent += `${key}: ${value}\n`;
+                        }
+                    }
+                }
+
+                if (nodeRawData.metadata && Array.isArray(nodeRawData.metadata)) {
+                    formattedContent += `\n<strong>元数据 (${nodeRawData.metadata.length} 条):</strong>\n`;
+                    formattedContent += `----------------------------\n`;
+                    nodeRawData.metadata.slice(0, 15).forEach(meta => {
+                        formattedContent += `- ${meta}\n`;
+                    });
+                    if (nodeRawData.metadata.length > 15) {
+                        formattedContent += `... (还有 ${nodeRawData.metadata.length - 15} 条元数据未显示)\n`;
+                    }
+                }
+
+                const outgoingEdges = nodeEdges.get(nodeRawData.name);
+                if (outgoingEdges && outgoingEdges.length > 0) {
+                    formattedContent += `\n<strong>直接关联 (出度: ${outgoingEdges.length}):</strong>\n`;
+                    formattedContent += `----------------------------\n`;
+                    outgoingEdges.slice(0, 10).forEach(edge => {
+                        formattedContent += `- ${edge.edgeType} → ${edge.to}\n`;
+                    });
+                    if (outgoingEdges.length > 10) {
+                        formattedContent += `... (还有 ${outgoingEdges.length - 10} 条出度关联未显示)\n`;
+                    }
+                }
+                formattedContent += `</div>`;
+
+                const rawJsonToggleId = 'rawJsonToggle';
+                const rawJsonContainerId = 'rawJsonContainer';
+                formattedContent += `<hr style="margin: 15px 0;">`; 
+                formattedContent += `<button id="${rawJsonToggleId}" class="btn" style="margin-bottom:10px;">显示/隐藏原始JSON</button>`;
+                formattedContent += `<div id="${rawJsonContainerId}" style="display:none; margin-top:5px; border:1px solid var(--gray-200); padding:10px; background:var(--gray-50); max-height: 300px; overflow-y: auto;"><pre>${JSON.stringify(nodeRawData, null, 2)}</pre></div>`;
+                
+                dataElement.innerHTML = formattedContent; 
+
+                setTimeout(() => { 
+                    const toggleBtn = document.getElementById(rawJsonToggleId);
+                    const rawContainer = document.getElementById(rawJsonContainerId);
+                    if (toggleBtn && rawContainer) {
+                        let isRawJsonVisible = false;
+                        toggleBtn.onclick = () => {
+                            isRawJsonVisible = !isRawJsonVisible;
+                            rawContainer.style.display = isRawJsonVisible ? 'block' : 'none';
+                            toggleBtn.textContent = isRawJsonVisible ? '隐藏原始JSON' : '显示原始JSON';
+                        };
+                        toggleBtn.textContent = '显示原始JSON'; 
+                        rawContainer.style.display = 'none';
+                    }
+                }, 0);
+
                 modal.style.display = 'flex';
             }
         },
@@ -1248,12 +1316,22 @@
             const computedStyles = getComputedStyle(document.documentElement);
             const primaryLight = computedStyles.getPropertyValue('--primary-light').trim();
             const primary = computedStyles.getPropertyValue('--primary').trim();
+            const primaryDark = computedStyles.getPropertyValue('--primary-dark').trim();
             const gray800 = computedStyles.getPropertyValue('--gray-800').trim();
             const success = computedStyles.getPropertyValue('--success').trim();
             const warning = computedStyles.getPropertyValue('--warning').trim();
+            const danger = computedStyles.getPropertyValue('--danger').trim(); // For center node highlight
             const gray400 = computedStyles.getPropertyValue('--gray-400').trim();
             const gray700 = computedStyles.getPropertyValue('--gray-700').trim();
             const gray50 = computedStyles.getPropertyValue('--gray-50').trim();
+
+            // Define colors for other node types
+            const npcColor = '#3498db'; // A distinct blue
+            const artifactColor = '#e74c3c'; // A distinct red
+            const questColor = '#9b59b6'; // A distinct purple
+            const factionColor = '#f1c40f'; // A distinct yellow
+            const defaultNodeColor = primaryLight;
+
 
             try {
                 this.instance = cytoscape({
@@ -1262,7 +1340,12 @@
                         {
                             selector: 'node',
                             style: {
-                                'background-color': primaryLight,
+                                // 'background-color': defaultNodeColor, // Fallback handled by function below
+                                'background-color': function(ele) {
+                                    // Specific selectors for isCenter and known types will override this.
+                                    // This function primarily serves nodes with an assignedColor.
+                                    return ele.data('assignedColor') || defaultNodeColor;
+                                },
                                 'border-color': primary,
                                 'border-width': '2px',
                                 'label': 'data(label)', 
@@ -1279,11 +1362,40 @@
                         },
                         {
                             selector: 'node[type="player_character"]',
-                            style: { 'background-color': success }
+                            style: { 'background-color': success, 'border-color': computedStyles.getPropertyValue('--success-dark') ? computedStyles.getPropertyValue('--success-dark').trim() : '#16a34a' }
                         },
                         {
                             selector: 'node[type="location"]',
-                            style: { 'background-color': warning }
+                            style: { 'background-color': warning, 'border-color': computedStyles.getPropertyValue('--warning-dark') ? computedStyles.getPropertyValue('--warning-dark').trim() : '#d97706' }
+                        },
+                        {
+                            selector: 'node[type="npc"]',
+                            style: { 'background-color': npcColor, 'border-color': '#2980b9' }
+                        },
+                        {
+                            selector: 'node[type="artifact"]',
+                            style: { 'background-color': artifactColor, 'border-color': '#c0392b' }
+                        },
+                        {
+                            selector: 'node[type="quest"]',
+                            style: { 'background-color': questColor, 'border-color': '#8e44ad' }
+                        },
+                        {
+                            selector: 'node[type="faction"]',
+                            style: { 'background-color': factionColor, 'border-color': '#c29d0b' }
+                        },
+                        {
+                            selector: 'node[isCenter="true"]', // Style for the central node
+                            style: {
+                                'background-color': warning, // Use warning color (yellow/orange) for background
+                                'border-color': danger,
+                                'border-width': '6px',      // Increased border width
+                                'shape': 'diamond',        // More distinct shape
+                                'width': 'mapData(metadataCount, 0, 20, 50, 120)', // Slightly larger base size
+                                'height': 'mapData(metadataCount, 0, 20, 50, 120)',// Slightly larger base size
+                                'font-weight': 'bold',     // Bold label
+                                'z-index': 20              // Ensure it's definitely on top
+                            }
                         },
                         {
                             selector: 'edge',
@@ -1308,11 +1420,24 @@
                     }
                 });
 
-                // Add tap listener for nodes in the graph
+                // Add tap listener for nodes in the graph (left-click)
                 this.instance.on('tap', 'node', (evt) => {
                     const clickedNodeData = evt.target.data('raw');
                     if (clickedNodeData) {
                         ui.showNodeDetailsModal(clickedNodeData);
+                    }
+                });
+
+                // Add context tap listener for nodes (right-click) to refocus graph
+                this.instance.on('cxttap', 'node', (evt) => {
+                    const tappedNode = evt.target;
+                    const nodeId = tappedNode.id(); // Get the ID (name) of the node
+                    if (nodeId) {
+                        // Prevent default browser context menu if not already handled by Cytoscape
+                        // evt.evt.preventDefault(); // Access original browser event
+                        
+                        showToast(`图谱已聚焦到: ${nodeId}`, 'success', 1500);
+                        this.renderGraph(nodeId, 1); // Refocus with depth 1, adjust depth as needed
                     }
                 });
 
@@ -1329,7 +1454,39 @@
             const queue = [{ name: centerNodeName, currentDepth: 0 }];
             const visitedNodes = new Set();
 
-            if (!currentData.find(n => n.type === 'node' && n.name === centerNodeName)){
+            const getNodeDisplayData = (nodeName, nodeType, rawNodeData, isNodeCenter) => {
+                let finalNodeColor = null;
+                // Types that have specific, hardcoded style selectors (their color is NOT set by assignedColor here)
+                const specificallyStyledTypes = ["player_character", "location", "npc", "artifact", "quest", "faction"];
+
+                if (isNodeCenter) {
+                    // Center node's style (including background) is handled by the 'node[isCenter="true"]' selector.
+                    // No need to set assignedColor here, it would be overridden or conflict.
+                } else if (specificallyStyledTypes.includes(nodeType)) {
+                    // These types also have specific selectors (e.g., 'node[type="location"]').
+                    // Their background color is defined there.
+                } else if (nodeType) { // For any other type not explicitly styled and not the center node
+                    finalNodeColor = getColorForNodeType(nodeType);
+                }
+
+                return {
+                    id: nodeName,
+                    label: `${nodeType || 'Unknown Type'}
+(${nodeName || 'Unknown Name'})`,
+                    type: nodeType,
+                    raw: rawNodeData,
+                    metadataCount: rawNodeData.metadata ? rawNodeData.metadata.length : 0,
+                    isCenter: isNodeCenter ? "true" : "false",
+                    assignedColor: finalNodeColor // This will be used by the default 'node' selector's background-color function
+                };
+            };
+
+
+            const centerNodeExists = currentData.find(n => n.type === 'node' && n.name === centerNodeName);
+            if (!centerNodeExists){
+                // If the center node itself doesn't exist in currentData, return empty.
+                // This can happen if data is filtered and the selected node is no longer present.
+                showToast(`节点 "${centerNodeName}" 在当前数据集中未找到，无法渲染图谱。`, 'warning');
                 return { nodes: [], edges: [] };
             }
 
@@ -1344,13 +1501,7 @@
                 const nodeData = currentData.find(n => n.type === 'node' && n.name === currentNodeName);
                 if (nodeData && !cyNodesMap.has(currentNodeName)) {
                     cyNodesMap.set(currentNodeName, {
-                        data: {
-                            id: currentNodeName,
-                            label: `${nodeData.nodeType ? nodeData.nodeType : 'Unknown Type'}\n(${currentNodeName ? currentNodeName : 'Unknown Name'})`, 
-                            type: nodeData.nodeType,
-                            raw: nodeData,
-                            metadataCount: nodeData.metadata ? nodeData.metadata.length : 0
-                        }
+                        data: getNodeDisplayData(currentNodeName, nodeData.nodeType, nodeData, currentNodeName === centerNodeName)
                     });
                 }
 
@@ -1366,27 +1517,29 @@
                         }
 
                         if (neighborName) {
-                            const edgeId = `${item.from}->${item.to}|${item.edgeType}_${Math.random().toString(36).substr(2, 5)}`; 
-                            if (!cyEdgesMap.has(edgeId)) {
-                                cyEdgesMap.set(edgeId, { data: { id: edgeId, source: item.from, target: item.to, label: item.edgeType, raw: item } });
-                            }
+                            // Ensure the edge connects two nodes that will be in the graph
+                            const sourceNodeExists = cyNodesMap.has(item.from) || currentData.find(n => n.type === 'node' && n.name === item.from);
+                            const targetNodeExists = cyNodesMap.has(item.to) || currentData.find(n => n.type === 'node' && n.name === item.to);
 
-                            if (!visitedNodes.has(neighborName)) {
-                                queue.push({ name: neighborName, currentDepth: currentDepth + 1 });
-                            }
-                            
-                            if (!cyNodesMap.has(neighborName)){
-                                const neighborNodeData = currentData.find(n => n.type === 'node' && n.name === neighborName); 
-                                if(neighborNodeData){
-                                    cyNodesMap.set(neighborName, {
-                                        data: {
-                                            id: neighborName,
-                                            label: `${neighborNodeData.nodeType ? neighborNodeData.nodeType : 'Unknown Type'}\n(${neighborName ? neighborName : 'Unknown Name'})`,
-                                            type: neighborNodeData.nodeType,
-                                            raw: neighborNodeData,
-                                            metadataCount: neighborNodeData.metadata ? neighborNodeData.metadata.length : 0
-                                        }
-                                    });
+                            if(sourceNodeExists && targetNodeExists) {
+                                const edgeId = `${item.from}->${item.to}|${item.edgeType}_${Math.random().toString(36).substr(2, 5)}`; 
+                                if (!cyEdgesMap.has(edgeId)) {
+                                    cyEdgesMap.set(edgeId, { data: { id: edgeId, source: item.from, target: item.to, label: item.edgeType, raw: item } });
+                                }
+
+                                if (!visitedNodes.has(neighborName) && (currentDepth + 1) <= depth) { // Check depth before adding to queue
+                                    queue.push({ name: neighborName, currentDepth: currentDepth + 1 });
+                                }
+                                
+                                // Add neighbor node if not already processed and part of the current depth
+                                if (!cyNodesMap.has(neighborName) && (currentDepth + 1) <= depth){
+                                    const neighborNodeData = currentData.find(n => n.type === 'node' && n.name === neighborName); 
+                                    if(neighborNodeData){
+                                        cyNodesMap.set(neighborName, {
+                                            // Neighbor is never the center node for this specific focused graph rendering
+                                            data: getNodeDisplayData(neighborName, neighborNodeData.nodeType, neighborNodeData, false)
+                                        });
+                                    }
                                 }
                             }
                         }
@@ -1401,7 +1554,7 @@
                 console.warn('Cytoscape instance not initialized. Attempting to initialize now.');
                 this.init(); 
                 if(!this.instance) {
-                    utils.showToast("图谱显示未能初始化。", "error");
+                    showToast("图谱显示未能初始化。", "error");
                     return;
                 }
             }
@@ -1411,7 +1564,12 @@
             const graphData = this.transformDataForCytoscape(nodeName, depth);
 
             if (graphData.nodes.length === 0 && nodeName) {
-                utils.showToast(`节点 "${nodeName}" 未找到或没有可供图谱显示的相关数据。`, 'warning');
+                // This condition is now handled inside transformDataForCytoscape if centerNodeName is not found.
+                // If transformDataForCytoscape returns empty due to other reasons (e.g. no connections at depth 1 for a valid node)
+                // then this message is still relevant.
+                if (currentData.find(n => n.type === 'node' && n.name === nodeName)) { // Check if node itself exists but has no connections to show
+                     showToast(`节点 "${nodeName}" 存在，但没有可供图谱显示的相关连接数据 (在当前深度 ${depth})。`, 'warning');
+                }
                 this.instance.elements().remove(); 
                 return;
             }
@@ -1420,33 +1578,43 @@
                 return; // No node name provided, clear graph
             }
             
-            this.instance.elements().remove(); // Clear previous elements before adding new ones
-            this.instance.add(graphData); // Add new elements
+            this.instance.elements().remove(); // Clear previous elements
+            this.instance.add(graphData);     // Add new elements
             
-            this.instance.layout({
-                name: 'cose',
-                idealEdgeLength: () => 120,
-                nodeOverlap: 30,
-                refresh: 30,
-                fit: true,
-                padding: 40,
+            const layout = this.instance.layout({
+                name: 'cose', // Concentric layout might be good for focusing on a center node
+                idealEdgeLength: () => 150, // Increased for more space
+                nodeOverlap: 40,            // Increased node overlap
+                refresh: 20,
+                fit: true,                  // Fit the viewport to the graph
+                padding: 50,                // Padding around the graph
                 randomize: false,
-                componentSpacing: 150,
-                nodeRepulsion: () => 600000,
-                edgeElasticity: () => 100,
+                componentSpacing: 120,       // Spacing between components
+                nodeRepulsion: () => 800000, // Increased repulsion
+                edgeElasticity: () => 150,   // Increased elasticity
                 nestingFactor: 5,
-                gravity: 100,
-                numIter: 1500,
-                initialTemp: 250,
+                gravity: 90,                 // Adjusted gravity
+                numIter: 2000,               // More iterations for better layout
+                initialTemp: 300,
                 coolingFactor: 0.95,
                 minTemp: 1.0,
-                animate: 'end',
-                animationDuration: 500
-            }).run();
+                animate: 'end',             // Animate layout changes
+                animationDuration: 600,     // Animation duration
+                ready: function(){
+                    // Optional: could zoom to center node here if needed after layout
+                },
+                stop: function(){
+                    // Optional: could ensure graph is centered after layout stops
+                    // this.instance.animate({
+                    //     fit: {
+                    //         eles: this.instance.nodes(),
+                    //         padding: 50
+                    //     }
+                    // }, { duration: 300 });
+                }
+            });
             
-            // Center and fit after layout run may not be needed if layout has fit:true
-            // this.instance.center();
-            // this.instance.fit();
+            layout.run();
         },
 
         clearGraph: function() {
@@ -1465,111 +1633,13 @@
             tab.addEventListener('click', () => ui.switchTab(tab.dataset.tab));
         });
 
+        // Centralized filter function (DECLARED GLOBALLY or accessible to initialize and updateViews)
+        // Moved applyTableFilters outside setupEventListeners to be globally accessible
+
         // Search and filter handlers
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            if (currentData) { 
-                const searchTerm = e.target.value;
-                const typeFilterValue = document.getElementById('typeFilter').value;
-                const viewFilterValue = document.getElementById('viewFilter').value;
-                
-                virtualListFullData = currentData.filter(item => {
-                    if (viewFilterValue === 'nodes' && item.type !== 'node') return false;
-                    if (viewFilterValue === 'edges' && item.type !== 'edge') return false;
-                    if (typeFilterValue !== 'all') {
-                        const [filterType, filterValue] = typeFilterValue.split(':');
-                        if (filterType === 'node' && (item.type !== 'node' || item.nodeType !== filterValue)) return false;
-                        if (filterType === 'edge' && (item.type !== 'edge' || item.edgeType !== filterValue)) return false;
-                    }
-                    if (searchTerm) {
-                        const searchLower = searchTerm.toLowerCase();
-                        const itemString = JSON.stringify(item).toLowerCase();
-                        return itemString.includes(searchLower);
-                    }
-                    return true;
-                });
-
-                nodeEdges = new Map(); // Rebuild nodeEdges for filtered data
-                virtualListFullData.forEach(item => {
-                    if (item.type === 'edge') {
-                        if (!nodeEdges.has(item.from)) {
-                            nodeEdges.set(item.from, []);
-                        }
-                        nodeEdges.get(item.from).push(item);
-                    }
-                });
-
-                if(virtualListTableContainer) virtualListTableContainer.scrollTop = 0; 
-                handleVirtualScroll(); 
-            }
-        });
-
-        document.getElementById('typeFilter').addEventListener('change', (e) => {
-            if (currentData) {
-                const typeFilterValue = e.target.value;
-                const searchTerm = document.getElementById('searchInput').value;
-                const viewFilterValue = document.getElementById('viewFilter').value;
-                virtualListFullData = currentData.filter(item => { 
-                    if (viewFilterValue === 'nodes' && item.type !== 'node') return false;
-                    if (viewFilterValue === 'edges' && item.type !== 'edge') return false;
-                    if (typeFilterValue !== 'all') {
-                        const [filterType, filterValue] = typeFilterValue.split(':');
-                        if (filterType === 'node' && (item.type !== 'node' || item.nodeType !== filterValue)) return false;
-                        if (filterType === 'edge' && (item.type !== 'edge' || item.edgeType !== filterValue)) return false;
-                    }
-                    if (searchTerm) {
-                        const searchLower = searchTerm.toLowerCase();
-                        const itemString = JSON.stringify(item).toLowerCase();
-                        return itemString.includes(searchLower);
-                    }
-                    return true;
-                });
-                nodeEdges = new Map(); // Rebuild nodeEdges for filtered data
-                virtualListFullData.forEach(item => {
-                    if (item.type === 'edge') {
-                        if (!nodeEdges.has(item.from)) {
-                            nodeEdges.set(item.from, []);
-                        }
-                        nodeEdges.get(item.from).push(item);
-                    }
-                });
-                if(virtualListTableContainer) virtualListTableContainer.scrollTop = 0;
-                handleVirtualScroll();
-            }
-        });
-
-        document.getElementById('viewFilter').addEventListener('change', (e) => {
-            if (currentData) {
-                const viewFilterValue = e.target.value;
-                const searchTerm = document.getElementById('searchInput').value;
-                const typeFilterValue = document.getElementById('typeFilter').value;
-                 virtualListFullData = currentData.filter(item => { 
-                    if (viewFilterValue === 'nodes' && item.type !== 'node') return false;
-                    if (viewFilterValue === 'edges' && item.type !== 'edge') return false;
-                    if (typeFilterValue !== 'all') {
-                        const [filterType, filterValue] = typeFilterValue.split(':');
-                        if (filterType === 'node' && (item.type !== 'node' || item.nodeType !== filterValue)) return false;
-                        if (filterType === 'edge' && (item.type !== 'edge' || item.edgeType !== filterValue)) return false;
-                    }
-                    if (searchTerm) {
-                        const searchLower = searchTerm.toLowerCase();
-                        const itemString = JSON.stringify(item).toLowerCase();
-                        return itemString.includes(searchLower);
-                    }
-                    return true;
-                });
-                nodeEdges = new Map(); // Rebuild nodeEdges for filtered data
-                virtualListFullData.forEach(item => {
-                    if (item.type === 'edge') {
-                        if (!nodeEdges.has(item.from)) {
-                            nodeEdges.set(item.from, []);
-                        }
-                        nodeEdges.get(item.from).push(item);
-                    }
-                });
-                if(virtualListTableContainer) virtualListTableContainer.scrollTop = 0;
-                handleVirtualScroll();
-            }
-        });
+        document.getElementById('searchInput').addEventListener('input', applyTableFilters);
+        document.getElementById('typeFilter').addEventListener('change', applyTableFilters);
+        document.getElementById('viewFilter').addEventListener('change', applyTableFilters);
 
         // Delegated event listener for table content (edge targets and metadata toggles)
         const memoryTable = document.getElementById('memoryTable');
@@ -1635,6 +1705,43 @@
         }
     }
 
+    // Centralized filter function - moved here to be globally accessible
+    function applyTableFilters() {
+        if (!currentData) return;
+
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const typeFilterValue = document.getElementById('typeFilter').value;
+        const viewFilterValue = document.getElementById('viewFilter').value; // This will now default to 'nodes'
+
+        virtualListFullData = currentData.filter(item => {
+            if (viewFilterValue === 'nodes' && item.type !== 'node') return false;
+            if (viewFilterValue === 'edges' && item.type !== 'edge') return false;
+            if (typeFilterValue !== 'all') {
+                const [filterType, filterValue] = typeFilterValue.split(':');
+                if (filterType === 'node' && (item.type !== 'node' || item.nodeType !== filterValue)) return false;
+                if (filterType === 'edge' && (item.type !== 'edge' || item.edgeType !== filterValue)) return false;
+            }
+            if (searchTerm) {
+                const itemString = JSON.stringify(item).toLowerCase();
+                return itemString.includes(searchTerm);
+            }
+            return true;
+        });
+
+        nodeEdges = new Map(); // Rebuild nodeEdges for filtered data
+        virtualListFullData.forEach(item => {
+            if (item.type === 'edge') {
+                if (!nodeEdges.has(item.from)) {
+                    nodeEdges.set(item.from, []);
+                }
+                nodeEdges.get(item.from).push(item);
+            }
+        });
+
+        if(virtualListTableContainer) virtualListTableContainer.scrollTop = 0; 
+        handleVirtualScroll();
+    }
+
     // --- Initialization ---
     async function initialize() {
         try {
@@ -1688,6 +1795,12 @@
         // If fileHandle is null here, it means no file was auto-loaded.
         if (!fileHandle) {
             hideLoadingIndicator();
+        }
+
+        // Apply initial filters after data might be loaded
+        // This ensures the default viewFilter ('nodes') is applied if data is auto-loaded
+        if (currentData && currentData.length > 0) {
+            applyTableFilters(); 
         }
     }
 
